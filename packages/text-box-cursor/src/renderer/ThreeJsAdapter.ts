@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { Line2 } from 'three/examples/jsm/lines/Line2.js';
+import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
+import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import type {
   BoxOptions,
   I3DRenderer,
@@ -39,6 +42,7 @@ export class ThreeJsRendererAdapter implements I3DRenderer {
   private readonly camera: THREE.Camera;
   private readonly frameGroup = new THREE.Group();
   private currentTransform: Transform = { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 };
+  private canvas: HTMLCanvasElement | null = null;
 
   /** Creates the adapter and registers an internal render group in scene. */
   constructor(options: ThreeJsRendererAdapterOptions) {
@@ -48,7 +52,7 @@ export class ThreeJsRendererAdapter implements I3DRenderer {
   }
 
   initialize(canvas: HTMLCanvasElement): void {
-    void canvas;
+    this.canvas = canvas;
   }
 
   destroy(): void {
@@ -120,13 +124,25 @@ export class ThreeJsRendererAdapter implements I3DRenderer {
       return;
     }
 
-    const visualWidth = Math.max(
-      1,
-      (options.width ?? 1) * ((Math.abs(this.currentTransform.scaleX ?? 1) + Math.abs(this.currentTransform.scaleY ?? 1)) / 2)
-    );
-    const quad = this.createLineQuad(p1, p2, visualWidth, parsed.color, alpha);
-    quad.renderOrder = options.renderOrder ?? 1;
-    this.frameGroup.add(quad);
+    const geometry = new LineGeometry();
+    geometry.setPositions([p1.x, p1.y, 0, p2.x, p2.y, 0]);
+
+    const material = new LineMaterial({
+      color: parsed.color,
+      linewidth: options.width ?? 1,
+      worldUnits: false,
+      transparent: alpha < 1,
+      opacity: alpha,
+      depthTest: false
+    });
+
+    const resolution = this.getResolution();
+    material.resolution.set(resolution.x, resolution.y);
+
+    const line = new Line2(geometry, material);
+    line.computeLineDistances();
+    line.renderOrder = options.renderOrder ?? 1;
+    this.frameGroup.add(line);
   }
 
   drawText(options: TextOptions): void {
@@ -362,5 +378,15 @@ export class ThreeJsRendererAdapter implements I3DRenderer {
     const matWithMap = material as THREE.Material & { map?: THREE.Texture };
     if (matWithMap.map) matWithMap.map.dispose();
     material.dispose();
+  }
+
+  private getResolution(): { x: number; y: number } {
+    if (this.canvas) {
+      return { x: this.canvas.width || 1, y: this.canvas.height || 1 };
+    }
+    if (typeof window !== 'undefined') {
+      return { x: window.innerWidth || 1, y: window.innerHeight || 1 };
+    }
+    return { x: 1, y: 1 };
   }
 }
