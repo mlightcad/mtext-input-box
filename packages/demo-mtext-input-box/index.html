@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MText Input Box Demo</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsoneditor@10.2.0/dist/jsoneditor.min.css" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/jsoneditor@10.2.0/dist/jsoneditor.min.js"></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="canvas-wrap">
+        <canvas id="stage" height="600"></canvas>
+      </section>
+
+      <section class="panel">
+        <div class="row">
+          <button id="toggleThemeBtn">Toggle Toolbar Theme</button>
+          <label class="control-check"><input id="debugEnabled" type="checkbox" /> Debug Mode</label>
+          <label class="control-check"><input id="debugShowBoxes" type="checkbox" checked /> Char Boxes</label>
+          <label class="control-check"><input id="debugShowChars" type="checkbox" /> Chars</label>
+          <label class="control-check"><input id="debugShowCharIndices" type="checkbox" /> Char Indices</label>
+          <label class="control-check"><input id="debugShowLineIndices" type="checkbox" /> Line Indices</label>
+        </div>
+
+        <div class="tabs" role="tablist" aria-label="Bottom Panel Tabs">
+          <button id="tabInfo" class="tab-btn is-active" role="tab" aria-selected="true" aria-controls="tabPaneInfo">Current Info</button>
+          <button id="tabAst" class="tab-btn" role="tab" aria-selected="false" aria-controls="tabPaneAst">AST Tree</button>
+          <button id="tabCursorLayout" class="tab-btn" role="tab" aria-selected="false" aria-controls="tabPaneCursorLayout">Layout</button>
+          <button id="tabRaw" class="tab-btn" role="tab" aria-selected="false" aria-controls="tabPaneRaw">Raw MTEXT</button>
+        </div>
+
+        <div id="tabPaneInfo" class="tab-pane is-active" role="tabpanel" aria-labelledby="tabInfo">
+          <pre id="status"></pre>
+        </div>
+        <div id="tabPaneAst" class="tab-pane" role="tabpanel" aria-labelledby="tabAst">
+          <div id="astEditor" class="ast-editor"></div>
+        </div>
+        <div id="tabPaneCursorLayout" class="tab-pane" role="tabpanel" aria-labelledby="tabCursorLayout">
+          <div id="cursorLayoutEditor" class="ast-editor"></div>
+        </div>
+        <div id="tabPaneRaw" class="tab-pane" role="tabpanel" aria-labelledby="tabRaw">
+          <div class="raw-grid">
+            <section class="raw-block">
+              <h4>Current MTEXT</h4>
+              <textarea id="rawMText" class="raw-text" readonly></textarea>
+            </section>
+            <section class="raw-block">
+              <h4>Diff vs Previous</h4>
+              <pre id="mtextDiff" class="diff-view"></pre>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

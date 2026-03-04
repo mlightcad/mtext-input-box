@@ -1,0 +1,27 @@
+{
+  "name": "@mlightcad/demo-three-cursor",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "three": "^0.172.0",
+    "@mlightcad/text-box-cursor": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.4.0",
+    "@typescript-eslint/eslint-plugin": "^8.41.0",
+    "@typescript-eslint/parser": "^8.41.0",
+    "eslint": "^9.34.0",
+    "eslint-config-prettier": "^10.1.8",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.41.0",
+    "vite": "^7.1.3",
+    "@types/three": "^0.172.0"
+  }
+}

@@ -1,0 +1,93 @@
+:root {
+  --bg: #151823;
+  --panel: #202638;
+  --line: #2d3551;
+  --text: #ebefff;
+  --muted: #9fabd4;
+  --accent: #3ea8ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+  color: var(--text);
+  background: radial-gradient(circle at 15% 15%, #1f2e52 0%, var(--bg) 48%);
+}
+
+.app-shell {
+  display: grid;
+  gap: 16px;
+  width: min(1100px, 96vw);
+  margin: 16px auto;
+}
+
+.canvas-wrap {
+  border: 1px solid #3a466f;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+  height: 420px;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #1e1e2e;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid #344063;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+label {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+button,
+select,
+input[type='range'] {
+  background: #111728;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+button:hover {
+  border-color: var(--accent);
+  cursor: pointer;
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#status {
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  color: #c6d0f8;
+  background: #121727;
+  white-space: pre-wrap;
+}

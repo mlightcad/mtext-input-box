@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TextBoxCursor Canvas Demo</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="canvas-wrap">
+        <canvas id="stage" width="1000" height="600"></canvas>
+      </section>
+      <section class="panel">
+        <div class="row">
+          <label for="sceneSelect">Scene</label>
+          <select id="sceneSelect"></select>
+          <label for="tolerance">Line Tolerance</label>
+          <input id="tolerance" type="range" min="0" max="30" value="5" />
+          <span id="toleranceValue">5px</span>
+        </div>
+        <div class="row">
+          <button id="zoomOutBtn">Zoom Out</button>
+          <button id="zoomInBtn">Zoom In</button>
+          <button id="zoomResetBtn">Reset Zoom</button>
+          <span id="zoomValue">100%</span>
+          <button id="leftBtn">←</button>
+          <button id="rightBtn">→</button>
+          <button id="upBtn">↑</button>
+          <button id="downBtn">↓</button>
+          <button id="selectAllBtn">Select All</button>
+          <button id="clearSelectionBtn">Clear Selection</button>
+          <button id="toggleDebugBtn">Toggle Debug</button>
+          <label class="checkbox">
+            <input id="dragToggle" type="checkbox" checked />
+            Enable Drag Selection
+          </label>
+        </div>
+        <pre id="status"></pre>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

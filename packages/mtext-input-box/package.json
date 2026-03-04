@@ -1,0 +1,40 @@
+{
+  "name": "@mlightcad/mtext-input-box",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint src tests",
+    "test": "vitest run --config ./vitest.config.ts"
+  },
+  "dependencies": {
+    "@mlightcad/text-box-cursor": "workspace:*"
+  },
+  "peerDependencies": {
+    "@mlightcad/mtext-parser": "^1.3.2",
+    "@mlightcad/mtext-renderer": "^0.10.1",
+    "three": "^0.172.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.4.0",
+    "@types/three": "^0.172.0",
+    "@typescript-eslint/eslint-plugin": "^8.41.0",
+    "@typescript-eslint/parser": "^8.41.0",
+    "eslint": "^9.34.0",
+    "eslint-config-prettier": "^10.1.8",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.41.0",
+    "vitest": "^3.2.4"
+  }
+}
