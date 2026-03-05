@@ -152,7 +152,7 @@ syncRendererSizeToCanvas();
 window.addEventListener('resize', syncRendererSizeToCanvas);
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableRotate = false;
+controls.enableRotate = true;
 controls.enablePan = true;
 controls.enableZoom = true;
 controls.zoomSpeed = 1.1;
