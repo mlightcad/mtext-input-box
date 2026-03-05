@@ -152,9 +152,10 @@ export type CursorRenderMode = 'plane' | 'geometry' | 'sprite';
  */
 export interface CursorStyle {
   /**
-   * Cursor stroke thickness in renderer units/pixels.
+   * Cursor stroke thickness in screen-space pixels.
    *
-   * This value is passed to adapter line drawing and is affected by view transform scaling.
+   * This value is treated as an approximate pixel size; `CursorRenderer` compensates for the
+   * current view transform scale so that the visual thickness remains stable under zoom.
    * Use a larger value (for example `2` to `4`) for better visibility on high-DPI or zoomed scenes.
    */
   width: number;

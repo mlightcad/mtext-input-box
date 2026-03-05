@@ -1,10 +1,14 @@
 :root {
   --bg: #151823;
-  --panel: #202638;
-  --line: #2d3551;
+  --panel: #1c2438;
+  --panel-subtle: #182137;
+  --line: #2f3d61;
+  --line-strong: #405180;
   --text: #ebefff;
   --muted: #9fabd4;
-  --accent: #3ea8ff;
+  --accent: #37b1ff;
+  --accent-soft: rgba(55, 177, 255, 0.2);
+  --success: #20c997;
 }
 
 * {
@@ -16,7 +20,10 @@ body {
   min-height: 100vh;
   font-family: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
   color: var(--text);
-  background: radial-gradient(circle at 15% 15%, #1f2e52 0%, var(--bg) 48%);
+  background:
+    radial-gradient(circle at 10% 10%, #253d6f 0%, transparent 42%),
+    radial-gradient(circle at 88% 20%, #1f355b 0%, transparent 38%),
+    var(--bg);
 }
 
 .app-shell {
@@ -27,6 +34,7 @@ body {
 }
 
 .canvas-wrap {
+  position: relative;
   border: 1px solid #3a466f;
   border-radius: 10px;
   overflow: hidden;
@@ -45,29 +53,47 @@ canvas {
 
 .panel {
   background: var(--panel);
-  border: 1px solid #344063;
-  border-radius: 10px;
-  padding: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 10px;
+}
+
+.row-main-actions {
+  margin-bottom: 12px;
+}
+
+.row-debug-controls {
+  margin-bottom: 14px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(9, 15, 28, 0.66) 0%, rgba(14, 22, 39, 0.66) 100%);
 }
 
 .control-check {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
+  padding: 7px 10px;
   border: 1px solid var(--line);
-  border-radius: 6px;
-  background: #111728;
+  border-radius: 999px;
+  background: #101828;
   color: var(--text);
   font-size: 12px;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.control-check:hover {
+  border-color: var(--line-strong);
+  background: #12203a;
 }
 
 .control-check input {
@@ -78,25 +104,66 @@ button {
   background: #111728;
   color: var(--text);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+button:hover {
+  border-color: var(--line-strong);
+  background: #142443;
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, #0a6db2 0%, #0c5b92 100%);
+  border-color: #2fb5ff;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(180deg, #0b7bc8 0%, #0f679f 100%);
+}
+
+.btn-primary.is-armed {
+  background: linear-gradient(180deg, #1fa074 0%, #1c8764 100%);
+  border-color: var(--success);
+}
+
+.interaction-hint {
+  color: #c5d2f9;
+  font-size: 12px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px dashed #456096;
+  background: rgba(12, 21, 39, 0.58);
+}
+
+.interaction-hint.is-armed {
+  color: #d9ffef;
+  border-color: rgba(32, 201, 151, 0.8);
+  background: rgba(10, 44, 36, 0.68);
 }
 
 .tabs {
   display: flex;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #131c31;
 }
 
 .tab-btn {
-  cursor: pointer;
-  background: #0f1524;
-  border-color: #3a466b;
+  background: #0f182b;
+  border-color: transparent;
+  color: #c4cff0;
 }
 
 .tab-btn.is-active {
   border-color: var(--accent);
-  background: #102846;
+  background: #102a4b;
   color: #d9ecff;
+  box-shadow: inset 0 0 0 1px var(--accent-soft);
 }
 
 .tab-pane {
@@ -111,18 +178,19 @@ button {
   margin: 0;
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 10px;
+  padding: 12px;
   color: #c6d0f8;
-  background: #121727;
+  background: var(--panel-subtle);
   white-space: pre-wrap;
-  min-height: 240px;
+  min-height: 260px;
 }
 
 .ast-editor {
   border: 1px solid var(--line);
   border-radius: 8px;
   overflow: hidden;
-  min-height: 320px;
+  min-height: 350px;
+  background: var(--panel-subtle);
 }
 
 .ast-editor .jsoneditor,
@@ -139,7 +207,7 @@ button {
 .raw-block {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #121727;
+  background: var(--panel-subtle);
   padding: 10px;
 }
 
@@ -152,7 +220,7 @@ button {
 .raw-text,
 .diff-view {
   width: 100%;
-  min-height: 230px;
+  min-height: 250px;
   margin: 0;
   border: 1px solid #31405f;
   border-radius: 6px;
@@ -197,4 +265,12 @@ button {
 
 .diff-token-same {
   color: #d2daf8;
+}
+
+.draw-rect {
+  position: absolute;
+  border: 1px dashed var(--accent);
+  background: rgba(30, 164, 255, 0.14);
+  pointer-events: none;
+  z-index: 5;
 }

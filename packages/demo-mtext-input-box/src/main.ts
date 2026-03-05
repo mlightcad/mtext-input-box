@@ -66,8 +66,11 @@ function buildInlineDiffHtml(previousText: string, currentText: string): string 
 }
 
 const canvas = requireNode(document.querySelector<HTMLCanvasElement>('#stage'), '#stage');
+const canvasWrap = requireNode(document.querySelector<HTMLElement>('.canvas-wrap'), '.canvas-wrap');
 const status = requireNode(document.querySelector<HTMLElement>('#status'), '#status');
+const drawBoxBtn = requireNode(document.querySelector<HTMLButtonElement>('#drawBoxBtn'), '#drawBoxBtn');
 const toggleThemeBtn = requireNode(document.querySelector<HTMLButtonElement>('#toggleThemeBtn'), '#toggleThemeBtn');
+const interactionHint = requireNode(document.querySelector<HTMLElement>('#interactionHint'), '#interactionHint');
 const debugEnabled = requireNode(document.querySelector<HTMLInputElement>('#debugEnabled'), '#debugEnabled');
 const debugShowBoxes = requireNode(document.querySelector<HTMLInputElement>('#debugShowBoxes'), '#debugShowBoxes');
 const debugShowChars = requireNode(document.querySelector<HTMLInputElement>('#debugShowChars'), '#debugShowChars');
@@ -149,7 +152,7 @@ syncRendererSizeToCanvas();
 window.addEventListener('resize', syncRendererSizeToCanvas);
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableRotate = false;
+controls.enableRotate = true;
 controls.enablePan = true;
 controls.enableZoom = true;
 controls.zoomSpeed = 1.1;
@@ -170,58 +173,61 @@ const defaultFormat = {
   rgb: 0xffffff
 };
 
+function createDemoEditor(options: {
+  id: string;
+  label: string;
+  origin: THREE.Vector3;
+  width: number;
+  initialText: string;
+  toolbarTheme?: 'light' | 'dark';
+}): DemoEditor {
+  const origin = options.origin.clone();
+  return {
+    id: options.id,
+    label: options.label,
+    origin,
+    editor: new MTextInputBox({
+      scene,
+      camera,
+      width: Math.max(1, options.width),
+      position: origin.clone(),
+      initialText: options.initialText,
+      defaultFormat,
+      imeTarget: canvas,
+      toolbar: { enabled: true, theme: options.toolbarTheme ?? 'dark', offsetY: 12 }
+    })
+  };
+}
+
 const editors: DemoEditor[] = [
-  {
+  createDemoEditor({
     id: 'A',
     label: 'Editor A',
     origin: new THREE.Vector3(70, 540, 0),
-    editor: new MTextInputBox({
-      scene,
-      camera,
-      width: 280,
-      position: new THREE.Vector3(70, 540, 0),
-      initialText: '{\\C10;Header A}\\PMulti-editor demo A\\P\\S1/2; + \\S3/4;',
-      defaultFormat,
-      imeTarget: canvas,
-      toolbar: { enabled: true, theme: 'dark', offsetY: 12 }
-    })
-  },
-  {
+    width: 280,
+    initialText: '{\\C10;Header A}\\PMulti-editor demo A\\P\\S1/2; + \\S3/4;'
+  }),
+  createDemoEditor({
     id: 'B',
     label: 'Editor B',
     origin: new THREE.Vector3(370, 380, 0),
-    editor: new MTextInputBox({
-      scene,
-      camera,
-      width: 300,
-      position: new THREE.Vector3(370, 380, 0),
-      initialText: '{\\C3;Second block}\\PUnicode: \\U+4F60\\U+597D\\PLine 3',
-      defaultFormat,
-      imeTarget: canvas,
-      toolbar: { enabled: true, theme: 'dark', offsetY: 12 }
-    })
-  },
-  {
+    width: 300,
+    initialText: '{\\C3;Second block}\\PUnicode: \\U+4F60\\U+597D\\PLine 3'
+  }),
+  createDemoEditor({
     id: 'C',
     label: 'Editor C',
     origin: new THREE.Vector3(170, 200, 0),
-    editor: new MTextInputBox({
-      scene,
-      camera,
-      width: 360,
-      position: new THREE.Vector3(170, 200, 0),
-      initialText: '{\\FArial|b1;Third} \\S2^ ; sample\\PClick any box to activate',
-      defaultFormat,
-      imeTarget: canvas,
-      toolbar: { enabled: true, theme: 'dark', offsetY: 12 }
-    })
-  }
+    width: 360,
+    initialText: '{\\FArial|b1;Third} \\S2^ ; sample\\PClick any box to activate'
+  })
 ];
 
 const previousMTextByEditor = editors.map((item) => item.editor.getText());
 let activeEditorIndex: number | null = 0;
 let mouseWcs: THREE.Vector3 | null = null;
 let mouseEditor: { x: number; y: number } | null = null;
+let dynamicEditorCount = 0;
 
 function getActiveEditorItem(): DemoEditor | null {
   if (activeEditorIndex === null) return null;
@@ -337,10 +343,10 @@ for (const input of [debugEnabled, debugShowBoxes, debugShowChars, debugShowChar
   input.addEventListener('change', applyDebugControls);
 }
 
-function screenToWorldOnZ0(event: MouseEvent): THREE.Vector3 | null {
+function screenToWorldOnZ0FromClient(clientX: number, clientY: number): THREE.Vector3 | null {
   const rect = canvas.getBoundingClientRect();
-  const ndcX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  const ndcY = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  const ndcX = ((clientX - rect.left) / rect.width) * 2 - 1;
+  const ndcY = -((clientY - rect.top) / rect.height) * 2 + 1;
 
   const nearPoint = new THREE.Vector3(ndcX, ndcY, -1).unproject(camera);
   const farPoint = new THREE.Vector3(ndcX, ndcY, 1).unproject(camera);
@@ -352,21 +358,146 @@ function screenToWorldOnZ0(event: MouseEvent): THREE.Vector3 | null {
   return nearPoint.add(rayDir.multiplyScalar(t));
 }
 
+function toCanvasLocalPoint(clientX: number, clientY: number): { x: number; y: number } {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: clientX - rect.left,
+    y: clientY - rect.top
+  };
+}
+
+function updateDrawRect(
+  drawRect: HTMLElement,
+  start: { x: number; y: number },
+  end: { x: number; y: number }
+): void {
+  const left = Math.min(start.x, end.x);
+  const top = Math.min(start.y, end.y);
+  const width = Math.abs(end.x - start.x);
+  const height = Math.abs(end.y - start.y);
+  drawRect.style.left = `${left}px`;
+  drawRect.style.top = `${top}px`;
+  drawRect.style.width = `${width}px`;
+  drawRect.style.height = `${height}px`;
+}
+
+function setDrawBoxMode(enabled: boolean): void {
+  isDrawBoxMode = enabled;
+  drawBoxBtn.classList.toggle('is-armed', enabled);
+  interactionHint.classList.toggle('is-armed', enabled);
+  canvas.style.cursor = enabled ? 'crosshair' : 'default';
+  interactionHint.textContent = enabled
+    ? 'Drawing mode: drag on canvas to create a new MTEXT box.'
+    : 'Tip: Click "Draw MTEXT Box", then drag on canvas.';
+}
+
+function cancelDrawBoxInteraction(): void {
+  if (drawRectElement) {
+    drawRectElement.remove();
+    drawRectElement = null;
+  }
+  drawStartClient = null;
+  drawCurrentClient = null;
+  controls.enabled = true;
+}
+
+function createDynamicEditorByWorldBox(
+  worldStart: THREE.Vector3,
+  worldEnd: THREE.Vector3
+): void {
+  const minX = Math.min(worldStart.x, worldEnd.x);
+  const maxY = Math.max(worldStart.y, worldEnd.y);
+  const width = Math.max(Math.abs(worldEnd.x - worldStart.x), 20);
+  const nextIndex = editors.length;
+  dynamicEditorCount += 1;
+  const editor = createDemoEditor({
+    id: `N${dynamicEditorCount}`,
+    label: `New Editor ${dynamicEditorCount}`,
+    origin: new THREE.Vector3(minX, maxY, 0),
+    width,
+    initialText: '',
+    toolbarTheme: getActiveEditorItem()?.editor.getToolbarTheme() ?? 'dark'
+  });
+  editors.push(editor);
+  previousMTextByEditor.push(editor.editor.getText());
+  bindEditorEvents(nextIndex);
+  applyDebugControls();
+  setActiveEditor(nextIndex);
+  editor.editor.showEditor();
+}
+
+let isDrawBoxMode = false;
+let drawStartClient: { x: number; y: number } | null = null;
+let drawCurrentClient: { x: number; y: number } | null = null;
+let drawRectElement: HTMLElement | null = null;
+
+drawBoxBtn.addEventListener('click', () => {
+  setDrawBoxMode(!isDrawBoxMode);
+  if (!isDrawBoxMode) {
+    cancelDrawBoxInteraction();
+  }
+});
+
+canvas.addEventListener('mousedown', (event) => {
+  if (!isDrawBoxMode || event.button !== 0) return;
+  event.preventDefault();
+  event.stopPropagation();
+  drawStartClient = { x: event.clientX, y: event.clientY };
+  drawCurrentClient = { ...drawStartClient };
+  controls.enabled = false;
+  if (!drawRectElement) {
+    drawRectElement = document.createElement('div');
+    drawRectElement.className = 'draw-rect';
+    canvasWrap.appendChild(drawRectElement);
+  }
+  updateDrawRect(drawRectElement, toCanvasLocalPoint(drawStartClient.x, drawStartClient.y), toCanvasLocalPoint(drawCurrentClient.x, drawCurrentClient.y));
+});
+
 canvas.addEventListener('mousemove', (event) => {
-  const world = screenToWorldOnZ0(event);
+  const world = screenToWorldOnZ0FromClient(event.clientX, event.clientY);
   mouseWcs = world;
   const active = getActiveEditorItem();
   if (!active || !world) {
     mouseEditor = null;
-    return;
+  } else {
+    mouseEditor = {
+      x: world.x - active.origin.x,
+      y: world.y - active.origin.y
+    };
   }
-  mouseEditor = {
-    x: world.x - active.origin.x,
-    y: world.y - active.origin.y
-  };
+
+  if (!drawStartClient || !drawRectElement) return;
+  drawCurrentClient = { x: event.clientX, y: event.clientY };
+  updateDrawRect(
+    drawRectElement,
+    toCanvasLocalPoint(drawStartClient.x, drawStartClient.y),
+    toCanvasLocalPoint(drawCurrentClient.x, drawCurrentClient.y)
+  );
 });
 
-editors.forEach((item, index) => {
+canvas.addEventListener('mouseup', (event) => {
+  if (!drawStartClient || event.button !== 0) return;
+  const start = drawStartClient;
+  const end = drawCurrentClient ?? { x: event.clientX, y: event.clientY };
+  const startWorld = screenToWorldOnZ0FromClient(start.x, start.y);
+  const endWorld = screenToWorldOnZ0FromClient(end.x, end.y);
+  const dragWidth = Math.abs(end.x - start.x);
+  const dragHeight = Math.abs(end.y - start.y);
+  cancelDrawBoxInteraction();
+  if (!isDrawBoxMode) return;
+  setDrawBoxMode(false);
+  if (!startWorld || !endWorld || dragWidth < 6 || dragHeight < 6) return;
+  createDynamicEditorByWorldBox(startWorld, endWorld);
+});
+
+canvas.addEventListener('mouseleave', () => {
+  if (!drawStartClient) return;
+  cancelDrawBoxInteraction();
+});
+
+function bindEditorEvents(index: number): void {
+  const item = editors[index];
+  if (!item) return;
   item.editor.on('change', () => {
     setActiveEditor(index);
   });
@@ -384,7 +515,11 @@ editors.forEach((item, index) => {
       setActiveEditor(null);
     }
   });
-});
+}
+
+for (let i = 0; i < editors.length; i += 1) {
+  bindEditorEvents(i);
+}
 
 setActiveEditor(0);
 
@@ -394,6 +529,7 @@ function updateStatus(): void {
     status.textContent = [
       `Editors: ${editors.map((item) => item.label).join(', ')}`,
       'Active Editor: none',
+      `Draw Box Mode: ${isDrawBoxMode ? 'On' : 'Off'}`,
       `Camera Zoom: ${camera.zoom.toFixed(2)}`,
       `Mouse WCS: ${mouseWcs ? `(${mouseWcs.x.toFixed(2)}, ${mouseWcs.y.toFixed(2)}, ${mouseWcs.z.toFixed(2)})` : '-'}`
     ].join('\n');
@@ -420,6 +556,7 @@ function updateStatus(): void {
     `Debug Chars: ${debugVisibility.showChars ? 'On' : 'Off'}`,
     `Debug Indices: ${debugVisibility.showCharIndices ? 'On' : 'Off'}`,
     `Debug Line Indices: ${debugVisibility.showLineIndices ? 'On' : 'Off'}`,
+    `Draw Box Mode: ${isDrawBoxMode ? 'On' : 'Off'}`,
     `Camera Zoom: ${camera.zoom.toFixed(2)}`,
     `Mouse WCS: ${mouseWcs ? `(${mouseWcs.x.toFixed(2)}, ${mouseWcs.y.toFixed(2)}, ${mouseWcs.z.toFixed(2)})` : '-'}`,
     `Mouse Active Editor Local: ${mouseEditor ? `(${mouseEditor.x.toFixed(2)}, ${mouseEditor.y.toFixed(2)})` : '-'}`,

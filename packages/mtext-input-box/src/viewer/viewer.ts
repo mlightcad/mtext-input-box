@@ -614,6 +614,11 @@ export class MTextInputBox {
       return false;
     }
 
+    if (event.key === 'Escape') {
+      this.closeEditor();
+      return true;
+    }
+
     const isMac = this.isMacPlatform();
     const primaryModifier = isMac ? event.metaKey : event.ctrlKey;
     const wordNavModifier = isMac ? event.altKey : event.ctrlKey;
@@ -1627,9 +1632,40 @@ export class MTextInputBox {
     const index = this.cursorLogic.getCurrentIndex();
     const line = this.cursorLogic.getCurrentLineInfo();
     if (boxes.length === 0) {
+      // Empty-content bootstrap path.
+      //
+      // Why this exists:
+      // - For a brand new/empty MTEXT, there are no glyph boxes yet.
+      // - In that state, TextBoxCursor falls back to its container line info.
+      // - Depending on renderer output, that fallback Y can represent the whole
+      //   container center instead of the first editable line center, so the
+      //   caret appears visually lower than the top line area.
+      //
+      // Goal:
+      // - Anchor caret to the first editable line, not to the entire empty box.
+      // - Keep X from cursor logic (fallbackPosition.x), only correct Y/height.
+      const firstLine = this.latestCursorLayoutData.lineLayouts?.[0];
+      if (firstLine && Number.isFinite(firstLine.y) && Number.isFinite(firstLine.height)) {
+        const lineHeight = Math.max(1, firstLine.height);
+        return {
+          // Best source: renderer-provided line layout already represents
+          // the actual first-line center in editor local coordinates.
+          position: { x: fallbackPosition.x, y: firstLine.y },
+          height: Math.max(1, lineHeight * 0.8)
+        };
+      }
+
+      const inferredLineHeight = Math.max(1, this.getFallbackLineAdvance());
       return {
-        position: fallbackPosition,
-        height: Math.max(1, fallbackHeight)
+        position: {
+          x: fallbackPosition.x,
+          // When explicit line layout is unavailable, infer first-line center
+          // from top-left container coordinates:
+          //   lineCenterY = containerTopY + lineHeight / 2
+          // This keeps caret aligned with the top row for empty MTEXT.
+          y: this.layoutContainer.y + inferredLineHeight / 2
+        },
+        height: Math.max(1, inferredLineHeight * 0.8)
       };
     }
 

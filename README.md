@@ -1,4 +1,4 @@
-# MLightCAD Rich Text Editor for Three.js (AutoCAD MTEXT Model)
+# Rich Text Editor for Three.js
 
 This monorepo focuses on one key idea: build a rich text editor in Three.js, with a document model based on AutoCAD MTEXT.
 

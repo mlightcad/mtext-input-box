@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -31,6 +31,7 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
+          registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -45,6 +46,12 @@ jobs:
 
       - name: Run tests (if present)
         run: pnpm -r --filter './packages/*' run --if-present test
+
+      - name: Publish mtext packages to npm
+        if: startsWith(github.ref, 'refs/tags/')
+        run: pnpm publish:mtext
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub release
         if: startsWith(github.ref, 'refs/tags/')
