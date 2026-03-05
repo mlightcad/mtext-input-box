@@ -305,4 +305,45 @@ describe('MTextInputBox cursor/document index mapping', () => {
       height: 24
     });
   });
+
+  test('anchors empty-content cursor to first line center from container top', () => {
+    const proto = MTextInputBox.prototype as unknown as Record<string, (...args: any[]) => any>;
+    const getActiveCursorRenderState = proto.getActiveCursorRenderState as (
+      this: any,
+      fallbackPosition: { x: number; y: number },
+      fallbackHeight: number
+    ) => { position: { x: number; y: number }; height: number };
+
+    const context = {
+      cursorLogic: {
+        getCharBoxes: () => [],
+        getCurrentIndex: () => 0,
+        getCurrentLineInfo: () => ({ startIndex: 0, endIndex: -1, charCount: 0, y: 220, height: 220 })
+      },
+      latestCursorLayoutData: { containerBox: { x: 0, y: 200, width: 300, height: 220 }, charBoxes: [] },
+      layoutContainer: { x: 0, y: 200, width: 300, height: 220 },
+      getFallbackLineAdvance: () => 24
+    };
+
+    const result = getActiveCursorRenderState.call(context, { x: 0, y: 220 }, 220);
+
+    expect(result.position).toEqual({ x: 0, y: 212 });
+    expect(result.height).toBeCloseTo(19.2);
+  });
+
+  test('handleKeyDown closes editor on Escape', () => {
+    const proto = MTextInputBox.prototype as unknown as Record<string, (...args: any[]) => any>;
+    const handleKeyDown = proto.handleKeyDown as (this: any, event: KeyboardEvent) => boolean;
+    const closeEditor = vi.fn();
+
+    const consumed = handleKeyDown.call(
+      {
+        closeEditor
+      },
+      { key: 'Escape', isComposing: false } as KeyboardEvent
+    );
+
+    expect(consumed).toBe(true);
+    expect(closeEditor).toHaveBeenCalledTimes(1);
+  });
 });

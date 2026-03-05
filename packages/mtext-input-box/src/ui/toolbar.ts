@@ -50,7 +50,7 @@ function ensureToolbarStyles(): void {
   const style = document.createElement('style');
   style.id = STYLE_ID;
   style.textContent = `
-.mlc-mtext-toolbar {
+.ml-mtext-toolbar {
   position: fixed;
   left: 0;
   top: 0;
@@ -67,69 +67,69 @@ function ensureToolbarStyles(): void {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
   user-select: none;
 }
-.mlc-mtext-toolbar[data-theme='dark'] {
+.ml-mtext-toolbar[data-theme='dark'] {
   background: linear-gradient(180deg, #2a2d33 0%, #1d2025 100%);
   border-color: #444b58;
   color: #e8ecf4;
 }
-.mlc-mtext-toolbar[data-theme='light'] {
+.ml-mtext-toolbar[data-theme='light'] {
   background: linear-gradient(180deg, #ffffff 0%, #f2f4f8 100%);
   border-color: #cfd5df;
   color: #1e2430;
 }
-.mlc-mtext-toolbar__group {
+.ml-mtext-toolbar__group {
   display: inline-flex;
   align-items: center;
   gap: 4px;
 }
-.mlc-mtext-toolbar__separator {
+.ml-mtext-toolbar__separator {
   width: 1px;
   height: 24px;
   opacity: 0.35;
 }
-.mlc-mtext-toolbar[data-theme='dark'] .mlc-mtext-toolbar__separator {
+.ml-mtext-toolbar[data-theme='dark'] .ml-mtext-toolbar__separator {
   background: #576177;
 }
-.mlc-mtext-toolbar[data-theme='light'] .mlc-mtext-toolbar__separator {
+.ml-mtext-toolbar[data-theme='light'] .ml-mtext-toolbar__separator {
   background: #b8c0ce;
 }
-.mlc-mtext-toolbar__select,
-.mlc-mtext-toolbar__input,
-.mlc-mtext-toolbar__color,
-.mlc-mtext-toolbar__btn {
+.ml-mtext-toolbar__select,
+.ml-mtext-toolbar__input,
+.ml-mtext-toolbar__color,
+.ml-mtext-toolbar__btn {
   border: 1px solid;
   border-radius: 6px;
   height: 34px;
 }
-.mlc-mtext-toolbar[data-theme='dark'] .mlc-mtext-toolbar__select,
-.mlc-mtext-toolbar[data-theme='dark'] .mlc-mtext-toolbar__input,
-.mlc-mtext-toolbar[data-theme='dark'] .mlc-mtext-toolbar__color,
-.mlc-mtext-toolbar[data-theme='dark'] .mlc-mtext-toolbar__btn {
+.ml-mtext-toolbar[data-theme='dark'] .ml-mtext-toolbar__select,
+.ml-mtext-toolbar[data-theme='dark'] .ml-mtext-toolbar__input,
+.ml-mtext-toolbar[data-theme='dark'] .ml-mtext-toolbar__color,
+.ml-mtext-toolbar[data-theme='dark'] .ml-mtext-toolbar__btn {
   background: #12161d;
   border-color: #454d5f;
   color: #f2f5fb;
 }
-.mlc-mtext-toolbar[data-theme='light'] .mlc-mtext-toolbar__select,
-.mlc-mtext-toolbar[data-theme='light'] .mlc-mtext-toolbar__input,
-.mlc-mtext-toolbar[data-theme='light'] .mlc-mtext-toolbar__color,
-.mlc-mtext-toolbar[data-theme='light'] .mlc-mtext-toolbar__btn {
+.ml-mtext-toolbar[data-theme='light'] .ml-mtext-toolbar__select,
+.ml-mtext-toolbar[data-theme='light'] .ml-mtext-toolbar__input,
+.ml-mtext-toolbar[data-theme='light'] .ml-mtext-toolbar__color,
+.ml-mtext-toolbar[data-theme='light'] .ml-mtext-toolbar__btn {
   background: #ffffff;
   border-color: #c7cdd8;
   color: #1f2632;
 }
-.mlc-mtext-toolbar__select {
+.ml-mtext-toolbar__select {
   min-width: 140px;
   padding: 0 8px;
 }
-.mlc-mtext-toolbar__input {
+.ml-mtext-toolbar__input {
   width: 64px;
   padding: 0 8px;
 }
-.mlc-mtext-toolbar__color {
+.ml-mtext-toolbar__color {
   width: 40px;
   padding: 2px;
 }
-.mlc-mtext-toolbar__btn {
+.ml-mtext-toolbar__btn {
   width: 34px;
   display: inline-flex;
   align-items: center;
@@ -137,29 +137,29 @@ function ensureToolbarStyles(): void {
   cursor: pointer;
   transition: border-color 0.14s ease, background 0.14s ease, color 0.14s ease;
 }
-.mlc-mtext-toolbar__btn svg {
+.ml-mtext-toolbar__btn svg {
   width: 24px;
   height: 24px;
   fill: currentColor;
 }
-.mlc-mtext-toolbar__btn.is-active {
+.ml-mtext-toolbar__btn.is-active {
   border-color: #2f9dff;
   color: #2f9dff;
 }
-.mlc-mtext-toolbar[data-theme='dark'] .mlc-mtext-toolbar__btn.is-active {
+.ml-mtext-toolbar[data-theme='dark'] .ml-mtext-toolbar__btn.is-active {
   background: linear-gradient(180deg, #123252 0%, #0c243d 100%);
   color: #8fcbff;
   box-shadow: inset 0 0 0 1px rgba(143, 203, 255, 0.18);
 }
-.mlc-mtext-toolbar[data-theme='light'] .mlc-mtext-toolbar__btn.is-active {
+.ml-mtext-toolbar[data-theme='light'] .ml-mtext-toolbar__btn.is-active {
   background: linear-gradient(180deg, #dcebff 0%, #cfe3ff 100%);
   color: #1d67ad;
   box-shadow: inset 0 0 0 1px rgba(29, 103, 173, 0.16);
 }
-.mlc-mtext-toolbar[data-theme='dark'] .mlc-mtext-toolbar__btn:hover {
+.ml-mtext-toolbar[data-theme='dark'] .ml-mtext-toolbar__btn:hover {
   background: #1f2530;
 }
-.mlc-mtext-toolbar[data-theme='light'] .mlc-mtext-toolbar__btn:hover {
+.ml-mtext-toolbar[data-theme='light'] .ml-mtext-toolbar__btn:hover {
   background: #edf3ff;
 }
 `;
@@ -184,7 +184,7 @@ function hexToColorNumber(hex: string): number {
 function createIconButton(title: string, icon: ToolbarIconName): HTMLButtonElement {
   const btn = document.createElement('button');
   btn.type = 'button';
-  btn.className = 'mlc-mtext-toolbar__btn';
+  btn.className = 'ml-mtext-toolbar__btn';
   btn.title = title;
   btn.setAttribute('aria-label', title);
   btn.setAttribute('aria-pressed', 'false');
@@ -226,13 +226,13 @@ export class MTextToolbar {
     this.theme = options.theme;
 
     this.root = document.createElement('div');
-    this.root.className = 'mlc-mtext-toolbar';
+    this.root.className = 'ml-mtext-toolbar';
 
     const typographyGroup = document.createElement('div');
-    typographyGroup.className = 'mlc-mtext-toolbar__group';
+    typographyGroup.className = 'ml-mtext-toolbar__group';
 
     const fontFamily = document.createElement('select');
-    fontFamily.className = 'mlc-mtext-toolbar__select';
+    fontFamily.className = 'ml-mtext-toolbar__select';
     for (const family of resolveFontFamilies(options.fontFamilies)) {
       const option = document.createElement('option');
       option.value = family;
@@ -241,23 +241,23 @@ export class MTextToolbar {
     }
 
     const fontSize = document.createElement('input');
-    fontSize.className = 'mlc-mtext-toolbar__input';
+    fontSize.className = 'ml-mtext-toolbar__input';
     fontSize.type = 'number';
     fontSize.min = '1';
     fontSize.max = '1024';
     fontSize.step = '1';
 
     const fontColor = document.createElement('input');
-    fontColor.className = 'mlc-mtext-toolbar__color';
+    fontColor.className = 'ml-mtext-toolbar__color';
     fontColor.type = 'color';
 
     typographyGroup.append(fontFamily, fontSize, fontColor);
 
     const separator1 = document.createElement('div');
-    separator1.className = 'mlc-mtext-toolbar__separator';
+    separator1.className = 'ml-mtext-toolbar__separator';
 
     const styleGroup = document.createElement('div');
-    styleGroup.className = 'mlc-mtext-toolbar__group';
+    styleGroup.className = 'ml-mtext-toolbar__group';
     const boldBtn = createIconButton('Bold', 'bold');
     const italicBtn = createIconButton('Italic', 'italic');
     const underlineBtn = createIconButton('Underline', 'underline');
@@ -442,3 +442,4 @@ export class MTextToolbar {
     });
   }
 }
+

@@ -15,8 +15,13 @@
       </section>
 
       <section class="panel">
-        <div class="row">
+        <div class="row row-main-actions">
+          <button id="drawBoxBtn" class="btn-primary">Draw MTEXT Box</button>
           <button id="toggleThemeBtn">Toggle Toolbar Theme</button>
+          <span id="interactionHint" class="interaction-hint">Tip: Click "Draw MTEXT Box", then drag on canvas.</span>
+        </div>
+
+        <div class="row row-debug-controls">
           <label class="control-check"><input id="debugEnabled" type="checkbox" /> Debug Mode</label>
           <label class="control-check"><input id="debugShowBoxes" type="checkbox" checked /> Char Boxes</label>
           <label class="control-check"><input id="debugShowChars" type="checkbox" /> Chars</label>
