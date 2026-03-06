@@ -118,6 +118,33 @@ export interface MTextBoundingBoxStyle {
 /** Construction options for `MTextInputBox`. */
 export type MTextToolbarTheme = 'light' | 'dark';
 
+/** Context passed to custom toolbar color picker factory. */
+export interface MTextToolbarColorPickerContext {
+  /** Host element where custom UI should be mounted. */
+  container: HTMLElement;
+  /** Current toolbar theme. */
+  theme: MTextToolbarTheme;
+  /** Initial color as hex string (`#RRGGBB`). */
+  initialColor: string;
+  /** Call when user picks a new color. */
+  onChange: (hexColor: string) => void;
+}
+
+/** Lifecycle hooks for a custom toolbar color picker. */
+export interface MTextToolbarColorPickerInstance {
+  /** Sync picker UI when editor format changes. */
+  setValue?: (hexColor: string) => void;
+  /** Sync picker UI when toolbar theme changes. */
+  setTheme?: (theme: MTextToolbarTheme) => void;
+  /** Cleanup mounted resources when toolbar is disposed. */
+  dispose?: () => void;
+}
+
+/** Factory used to mount custom toolbar color picker UI (for example a Vue component). */
+export type MTextToolbarColorPickerFactory = (
+  context: MTextToolbarColorPickerContext
+) => MTextToolbarColorPickerInstance | void;
+
 /** Toolbar options for built-in editor toolbar UI. */
 export interface MTextToolbarOptions {
   /** Enables the built-in toolbar. Defaults to true. */
@@ -126,6 +153,8 @@ export interface MTextToolbarOptions {
   theme?: MTextToolbarTheme;
   /** Available font family options shown in toolbar dropdown. */
   fontFamilies?: string[];
+  /** Custom color picker factory used instead of native `<input type="color">`. */
+  colorPicker?: MTextToolbarColorPickerFactory;
   /** Custom DOM container to mount toolbar. Defaults to document.body. */
   container?: HTMLElement;
   /** Vertical offset in pixels above editor top edge. Defaults to 10. */

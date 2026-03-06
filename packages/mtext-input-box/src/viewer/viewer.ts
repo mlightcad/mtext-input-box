@@ -31,6 +31,7 @@ import type {
   MTextBoundingBoxStyle,
   MTextInputBoxEvent,
   MTextInputBoxOptions,
+  MTextToolbarColorPickerFactory,
   MTextToolbarTheme,
   SelectionDirection
 } from './types';
@@ -51,6 +52,7 @@ export class MTextInputBox {
   private static sharedToolbar: MTextToolbar | null = null;
   private static sharedToolbarContainer: HTMLElement | null = null;
   private static sharedToolbarFontFamiliesKey = '';
+  private static sharedToolbarColorPickerFactory: MTextToolbarColorPickerFactory | null = null;
   private static readonly instances = new Set<MTextInputBox>();
 
   private readonly scene: THREE.Scene;
@@ -114,6 +116,7 @@ export class MTextInputBox {
   private toolbarEnabled = true;
   private toolbarContainer: HTMLElement | null = null;
   private toolbarFontFamilies: string[] | null = null;
+  private toolbarColorPicker: MTextToolbarColorPickerFactory | undefined;
 
   private readonly onImeKeyDown = (event: KeyboardEvent): void => {
     if (!this.isActiveEditor()) return;
@@ -254,6 +257,7 @@ export class MTextInputBox {
     this.toolbarEnabled = options.toolbar?.enabled ?? true;
     this.toolbarContainer = options.toolbar?.container ?? null;
     this.toolbarFontFamilies = options.toolbar?.fontFamilies ?? null;
+    this.toolbarColorPicker = options.toolbar?.colorPicker;
     this.width = Math.max(1, options.width);
     this.position = options.position?.clone() ?? new THREE.Vector3(0, 0, 0);
     this.enableWordWrap = options.enableWordWrap ?? true;
@@ -777,6 +781,7 @@ export class MTextInputBox {
       MTextInputBox.sharedToolbar = null;
       MTextInputBox.sharedToolbarContainer = null;
       MTextInputBox.sharedToolbarFontFamiliesKey = '';
+      MTextInputBox.sharedToolbarColorPickerFactory = null;
       MTextInputBox.activeEditor = null;
     }
   }
@@ -966,7 +971,8 @@ export class MTextInputBox {
     const shouldRecreate =
       !MTextInputBox.sharedToolbar ||
       MTextInputBox.sharedToolbarContainer !== container ||
-      MTextInputBox.sharedToolbarFontFamiliesKey !== fontFamiliesKey;
+      MTextInputBox.sharedToolbarFontFamiliesKey !== fontFamiliesKey ||
+      MTextInputBox.sharedToolbarColorPickerFactory !== (this.toolbarColorPicker ?? null);
 
     if (shouldRecreate) {
       MTextInputBox.sharedToolbar?.dispose();
@@ -979,9 +985,13 @@ export class MTextInputBox {
       if (this.toolbarFontFamilies) {
         toolbarOptions.fontFamilies = this.toolbarFontFamilies;
       }
+      if (this.toolbarColorPicker) {
+        toolbarOptions.colorPicker = this.toolbarColorPicker;
+      }
       MTextInputBox.sharedToolbar = new MTextToolbar(toolbarOptions);
       MTextInputBox.sharedToolbarContainer = container;
       MTextInputBox.sharedToolbarFontFamiliesKey = fontFamiliesKey;
+      MTextInputBox.sharedToolbarColorPickerFactory = this.toolbarColorPicker ?? null;
     }
 
     const toolbar = MTextInputBox.sharedToolbar;

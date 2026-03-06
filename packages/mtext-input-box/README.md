@@ -81,8 +81,54 @@ The built-in toolbar is a DOM overlay mounted above the active editor and update
 - `enabled?: boolean` (default `true`)
 - `theme?: 'light' | 'dark'` (default `dark`)
 - `fontFamilies?: string[]` (default `['Arial', 'Helvetica', 'Verdana', 'Tahoma', 'Trebuchet MS', 'Times New Roman', 'Georgia', 'Courier New', 'system-ui', 'sans-serif', 'serif', 'monospace']`)
+- `colorPicker?: (context) => { setValue?, setTheme?, dispose? }` (optional custom picker factory)
 - `container?: HTMLElement` (default `document.body`)
 - `offsetY?: number` (default `10`)
+
+Custom color picker factory context:
+
+- `container: HTMLElement`: mount point for your UI.
+- `theme: 'light' | 'dark'`: current toolbar theme.
+- `initialColor: '#RRGGBB'`: initial color.
+- `onChange(hexColor)`: call this when user picks a new color.
+
+Example (mount a Vue color picker):
+
+```ts
+import { createApp, h, ref } from 'vue';
+
+toolbar: {
+  colorPicker: ({ container, initialColor, theme, onChange }) => {
+    const color = ref(initialColor);
+    const app = createApp({
+      render() {
+        return h(MyVueColorPicker, {
+          modelValue: color.value,
+          theme,
+          'onUpdate:modelValue': (next: string) => {
+            color.value = next;
+            onChange(next);
+          }
+        });
+      }
+    });
+
+    app.mount(container);
+
+    return {
+      setValue(next: string) {
+        color.value = next;
+      },
+      setTheme(nextTheme: 'light' | 'dark') {
+        // Optional: forward theme into your picker state if needed.
+      },
+      dispose() {
+        app.unmount();
+      }
+    };
+  }
+}
+```
 
 Public toolbar-related methods:
 
@@ -107,7 +153,7 @@ Public toolbar-related methods:
 - `boundingBoxStyle?: { color?, opacity?, padding?, zOffset? }`: boundary style overrides.
 - `workerUrl?: string | URL`: worker URL for renderer initialization.
 - `cursorStyle` / `selectionStyle`: forwarded to cursor renderer.
-- `toolbar`: built-in toolbar options (`enabled`, `theme`, `fontFamilies`, `container`, `offsetY`).
+- `toolbar`: built-in toolbar options (`enabled`, `theme`, `fontFamilies`, `colorPicker`, `container`, `offsetY`).
 
 ## Input And Interaction
 
