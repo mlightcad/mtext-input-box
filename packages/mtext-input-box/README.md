@@ -1,13 +1,21 @@
-# @mlightcad/mtext-input-box - Three.js Rich Text Editor
+# Three.js Rich Text Editor
 
 Three.js-based MTEXT editor component with built-in IME bridge, cursor/selection rendering, and floating toolbar.
 
+![MText Editor](../../docs/mtext-editor.webp)
+
 ## Purpose
 
-- MTEXT-style editing in Three.js.
-- Keyboard/mouse/IME editing, selection, formatting, undo/redo.
-- Built-in toolbar (theme/font list/container/offset configurable).
-- Integrates `@mlightcad/mtext-renderer` and `@mlightcad/text-box-cursor`.
+- MTEXT-style editing in Three.js
+- Keyboard/mouse/IME editing, selection, formatting, and undo/redo
+- Built-in toolbar (configurable theme, font list, container, and offset)
+- Integration with `@mlightcad/mtext-renderer` and `@mlightcad/text-box-cursor`
+
+## Technical Details
+
+- Medium article: [Building a Three.js Rich Text Editor](https://medium.com/@mlightcad/building-a-three-js-rich-text-editor-b7283126ee97)
+
+![arch diagram](../../docs/architecture.svg)
 
 ## Install
 
@@ -66,7 +74,7 @@ Notes:
 
 ## Toolbar
 
-The built-in toolbar is a DOM overlay mounted above the active editor and updated automatically when camera/viewport changes.
+The built-in toolbar is a DOM overlay mounted above the active editor and updated automatically when the camera or viewport changes.
 
 `toolbar` options:
 
