@@ -9,6 +9,8 @@ This monorepo focuses on one key idea: build a rich text editor in Three.js, wit
 - Provide reusable building blocks: cursor/selection engine, MTEXT editor, and toolbar UI.
 - Provide demo apps for Canvas2D cursor rendering, Three.js cursor rendering, and MTEXT editing.
 
+![arch diagram](./docs/architecture.svg)
+
 ## Packages
 
 - `@mlightcad/text-box-cursor` (`packages/text-box-cursor`): renderer-agnostic cursor + selection engine, with Canvas2D and Three.js adapters.
