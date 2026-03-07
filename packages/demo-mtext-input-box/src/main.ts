@@ -1,7 +1,15 @@
-import { MTextInputBox, parseMTextToAst } from '@mlightcad/mtext-input-box';
+import {
+  MTextInputBox,
+  parseMTextToAst,
+  type MTextToolbarColorPickerFactory,
+  type MTextToolbarTheme
+} from '@mlightcad/mtext-input-box';
 import { diffWordsWithSpace } from 'diff';
+import { ElColorPicker } from 'element-plus';
+import 'element-plus/dist/index.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { createApp, defineComponent, h, ref } from 'vue';
 
 interface JsonEditorInstance {
   set(data: unknown): void;
@@ -33,6 +41,61 @@ function colorNumberToHex(color: number | null): string {
   if (color === null) return '-';
   return `#${normalizeColorNumber(color).toString(16).padStart(6, '0')}`;
 }
+
+function normalizeHexColor(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const normalized = value.trim().toLowerCase();
+  if (/^#[0-9a-f]{6}$/.test(normalized)) return normalized;
+  if (/^[0-9a-f]{6}$/.test(normalized)) return `#${normalized}`;
+  return null;
+}
+
+const createElementPlusToolbarColorPicker: MTextToolbarColorPickerFactory = ({
+  container,
+  initialColor,
+  theme,
+  onChange
+}) => {
+  const colorRef = ref(normalizeHexColor(initialColor) ?? '#ffffff');
+  const themeRef = ref<MTextToolbarTheme>(theme);
+
+  const PickerRoot = defineComponent({
+    name: 'ToolbarElementPlusColorPicker',
+    setup() {
+      return () =>
+        h(ElColorPicker, {
+          modelValue: colorRef.value,
+          'onUpdate:modelValue': (value: string | null) => {
+            const normalized = normalizeHexColor(value);
+            if (!normalized) return;
+            colorRef.value = normalized;
+            onChange(normalized);
+          },
+          colorFormat: 'hex',
+          showAlpha: false,
+          effect: themeRef.value,
+          teleported: true
+        });
+    }
+  });
+
+  const app = createApp(PickerRoot);
+  app.mount(container);
+
+  return {
+    setValue: (nextColor: string) => {
+      const normalized = normalizeHexColor(nextColor);
+      if (!normalized) return;
+      colorRef.value = normalized;
+    },
+    setTheme: (nextTheme: MTextToolbarTheme) => {
+      themeRef.value = nextTheme;
+    },
+    dispose: () => {
+      app.unmount();
+    }
+  };
+};
 
 function escapeHtml(value: string): string {
   return value
@@ -194,7 +257,12 @@ function createDemoEditor(options: {
       initialText: options.initialText,
       defaultFormat,
       imeTarget: canvas,
-      toolbar: { enabled: true, theme: options.toolbarTheme ?? 'dark', offsetY: 12 }
+      toolbar: {
+        enabled: true,
+        theme: options.toolbarTheme ?? 'dark',
+        offsetY: 12,
+        colorPicker: createElementPlusToolbarColorPicker
+      }
     })
   };
 }

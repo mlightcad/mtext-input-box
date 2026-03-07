@@ -1,4 +1,9 @@
-import type { CharFormat, MTextToolbarTheme } from '../viewer/types';
+import type {
+  CharFormat,
+  MTextToolbarColorPickerFactory,
+  MTextToolbarColorPickerInstance,
+  MTextToolbarTheme
+} from '../viewer/types';
 import { toolbarIcons, type ToolbarIconName } from './icons';
 
 export interface ToolbarOptions {
@@ -6,18 +11,18 @@ export interface ToolbarOptions {
   container?: HTMLElement;
   theme: MTextToolbarTheme;
   fontFamilies?: string[];
+  colorPicker?: MTextToolbarColorPickerFactory;
   onFormatChange: (partial: Partial<CharFormat>) => void;
   onToggleStack: () => void;
   onToggleSuperscript?: () => boolean;
   onToggleSubscript?: () => boolean;
 }
 
-export type ToolbarSessionOptions = Omit<ToolbarOptions, 'container' | 'theme' | 'fontFamilies'>;
+export type ToolbarSessionOptions = Omit<ToolbarOptions, 'container' | 'theme' | 'fontFamilies' | 'colorPicker'>;
 
 interface ToolbarControls {
   fontFamily: HTMLSelectElement;
   fontSize: HTMLInputElement;
-  fontColor: HTMLInputElement;
   boldBtn: HTMLButtonElement;
   italicBtn: HTMLButtonElement;
   underlineBtn: HTMLButtonElement;
@@ -26,6 +31,13 @@ interface ToolbarControls {
   superscriptBtn: HTMLButtonElement;
   subscriptBtn: HTMLButtonElement;
   stackBtn: HTMLButtonElement;
+}
+
+interface ToolbarColorPickerBinding {
+  host: HTMLElement;
+  setValue: (hex: string) => void;
+  setTheme: (theme: MTextToolbarTheme) => void;
+  dispose: () => void;
 }
 
 const STYLE_ID = 'mlightcad-mtext-toolbar-style';
@@ -181,6 +193,13 @@ function hexToColorNumber(hex: string): number {
   return Number.parseInt(hex.slice(1), 16);
 }
 
+function normalizeHexColor(hex: string): string | null {
+  const normalized = hex.trim().toLowerCase();
+  if (/^#[0-9a-f]{6}$/.test(normalized)) return normalized;
+  if (/^[0-9a-f]{6}$/.test(normalized)) return `#${normalized}`;
+  return null;
+}
+
 function createIconButton(title: string, icon: ToolbarIconName): HTMLButtonElement {
   const btn = document.createElement('button');
   btn.type = 'button';
@@ -214,6 +233,7 @@ export class MTextToolbar {
   private onToggleSuperscript: () => boolean;
   private onToggleSubscript: () => boolean;
   private theme: MTextToolbarTheme;
+  private readonly colorPicker: ToolbarColorPickerBinding;
 
   constructor(options: ToolbarOptions) {
     ensureToolbarStyles();
@@ -247,11 +267,8 @@ export class MTextToolbar {
     fontSize.max = '1024';
     fontSize.step = '1';
 
-    const fontColor = document.createElement('input');
-    fontColor.className = 'ml-mtext-toolbar__color';
-    fontColor.type = 'color';
-
-    typographyGroup.append(fontFamily, fontSize, fontColor);
+    this.colorPicker = this.createColorPicker(options.colorPicker);
+    typographyGroup.append(fontFamily, fontSize, this.colorPicker.host);
 
     const separator1 = document.createElement('div');
     separator1.className = 'ml-mtext-toolbar__separator';
@@ -282,7 +299,6 @@ export class MTextToolbar {
     this.controls = {
       fontFamily,
       fontSize,
-      fontColor,
       boldBtn,
       italicBtn,
       underlineBtn,
@@ -302,6 +318,7 @@ export class MTextToolbar {
   public setTheme(theme: MTextToolbarTheme): void {
     this.theme = theme;
     this.root.dataset.theme = theme;
+    this.colorPicker.setTheme(theme);
   }
 
   public getTheme(): MTextToolbarTheme {
@@ -341,7 +358,7 @@ export class MTextToolbar {
     this.controls.fontSize.value = String(Math.max(1, Math.round(format.fontSize)));
 
     const color = format.rgb !== null ? format.rgb : 0xffffff;
-    this.controls.fontColor.value = colorNumberToHex(color);
+    this.colorPicker.setValue(colorNumberToHex(color));
 
     this.setToggleState(this.controls.boldBtn, format.bold);
     this.setToggleState(this.controls.italicBtn, format.italic);
@@ -353,6 +370,7 @@ export class MTextToolbar {
   }
 
   public dispose(): void {
+    this.colorPicker.dispose();
     this.root.remove();
   }
 
@@ -397,13 +415,6 @@ export class MTextToolbar {
       }
     });
 
-    this.controls.fontColor.addEventListener('input', () => {
-      this.onFormatChange({
-        aci: null,
-        rgb: hexToColorNumber(this.controls.fontColor.value)
-      });
-    });
-
     this.controls.boldBtn.addEventListener('click', () => {
       this.onFormatChange({ bold: !this.controls.boldBtn.classList.contains('is-active') });
     });
@@ -436,9 +447,69 @@ export class MTextToolbar {
     this.root.addEventListener('mousedown', (event) => {
       const target = event.target as HTMLElement | null;
       if (!target) return;
+      if (target.closest('[data-ml-mtext-toolbar-interactive="true"]')) return;
       if (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'OPTION') return;
       event.preventDefault();
       this.anchorElement.focus({ preventScroll: true });
+    });
+  }
+
+  private createColorPicker(factory?: MTextToolbarColorPickerFactory): ToolbarColorPickerBinding {
+    if (!factory) {
+      const input = document.createElement('input');
+      input.className = 'ml-mtext-toolbar__color';
+      input.type = 'color';
+      input.dataset.mlMtextToolbarInteractive = 'true';
+      input.addEventListener('input', () => {
+        this.applyColorChange(input.value);
+      });
+      return {
+        host: input,
+        setValue: (hex) => {
+          const normalized = normalizeHexColor(hex);
+          if (normalized) input.value = normalized;
+        },
+        setTheme: () => {},
+        dispose: () => {}
+      };
+    }
+
+    const host = document.createElement('div');
+    host.className = 'ml-mtext-toolbar__color';
+    host.dataset.mlMtextToolbarInteractive = 'true';
+
+    const instance = factory({
+      container: host,
+      theme: this.theme,
+      initialColor: '#ffffff',
+      onChange: (hex) => {
+        this.applyColorChange(hex);
+      }
+    });
+
+    const typed = (instance ?? {}) as MTextToolbarColorPickerInstance;
+    return {
+      host,
+      setValue: (hex) => {
+        const normalized = normalizeHexColor(hex);
+        if (!normalized) return;
+        typed.setValue?.(normalized);
+      },
+      setTheme: (theme) => {
+        typed.setTheme?.(theme);
+      },
+      dispose: () => {
+        typed.dispose?.();
+      }
+    };
+  }
+
+  private applyColorChange(hex: string): void {
+    const normalized = normalizeHexColor(hex);
+    if (!normalized) return;
+    this.onFormatChange({
+      aci: null,
+      rgb: hexToColorNumber(normalized)
     });
   }
 }
