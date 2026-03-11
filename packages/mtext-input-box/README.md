@@ -92,14 +92,31 @@ Custom color picker factory context:
 - `initialColor: '#RRGGBB'`: initial color.
 - `onChange(hexColor)`: call this when user picks a new color.
 
+Custom color picker instance methods:
+
+- `setValue(color: MTextColor)`: sync when editor format changes (color may be ACI or RGB).
+- `setTheme(theme)`: optional hook for theme changes.
+- `dispose()`: cleanup any mounted resources.
+
 Example (mount a Vue color picker):
 
 ```ts
 import { createApp, h, ref } from 'vue';
+import { getColorByIndex } from '@mlightcad/mtext-renderer';
+import { MTextColor } from '@mlightcad/mtext-parser';
 
 toolbar: {
   colorPicker: ({ container, initialColor, theme, onChange }) => {
     const color = ref(initialColor);
+    const toHex = (value: MTextColor) => {
+      if (value.isRgb && value.rgbValue !== null) {
+        return `#${value.rgbValue.toString(16).padStart(6, '0')}`;
+      }
+      if (value.isAci && value.aci !== null) {
+        return `#${getColorByIndex(value.aci).toString(16).padStart(6, '0')}`;
+      }
+      return '#ffffff';
+    };
     const app = createApp({
       render() {
         return h(MyVueColorPicker, {
@@ -116,8 +133,8 @@ toolbar: {
     app.mount(container);
 
     return {
-      setValue(next: string) {
-        color.value = next;
+      setValue(next: MTextColor) {
+        color.value = toHex(next);
       },
       setTheme(nextTheme: 'light' | 'dark') {
         // Optional: forward theme into your picker state if needed.

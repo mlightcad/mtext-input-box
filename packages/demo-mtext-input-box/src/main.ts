@@ -7,6 +7,8 @@ import {
 import { diffWordsWithSpace } from 'diff';
 import { ElColorPicker } from 'element-plus';
 import 'element-plus/dist/index.css';
+import { MTextColor } from '@mlightcad/mtext-parser';
+import { getColorByIndex } from '@mlightcad/mtext-renderer';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { createApp, defineComponent, h, ref } from 'vue';
@@ -50,6 +52,16 @@ function normalizeHexColor(value: string | null | undefined): string | null {
   return null;
 }
 
+function mtextColorToHex(color: MTextColor): string {
+  if (color.isRgb && color.rgbValue !== null) {
+    return colorNumberToHex(color.rgbValue);
+  }
+  if (color.isAci && color.aci !== null) {
+    return colorNumberToHex(getColorByIndex(color.aci));
+  }
+  return '#ffffff';
+}
+
 const createElementPlusToolbarColorPicker: MTextToolbarColorPickerFactory = ({
   container,
   initialColor,
@@ -83,10 +95,8 @@ const createElementPlusToolbarColorPicker: MTextToolbarColorPickerFactory = ({
   app.mount(container);
 
   return {
-    setValue: (nextColor: string) => {
-      const normalized = normalizeHexColor(nextColor);
-      if (!normalized) return;
-      colorRef.value = normalized;
+    setValue: (nextColor: MTextColor) => {
+      colorRef.value = mtextColorToHex(nextColor);
     },
     setTheme: (nextTheme: MTextToolbarTheme) => {
       themeRef.value = nextTheme;
