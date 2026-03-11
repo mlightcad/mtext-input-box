@@ -4,6 +4,8 @@ import type {
   MTextToolbarColorPickerInstance,
   MTextToolbarTheme
 } from '../viewer/types';
+import { getColorByIndex } from '@mlightcad/mtext-renderer';
+import { MTextColor } from '@mlightcad/mtext-parser';
 import { toolbarIcons, type ToolbarIconName } from './icons';
 
 export interface ToolbarOptions {
@@ -35,7 +37,7 @@ interface ToolbarControls {
 
 interface ToolbarColorPickerBinding {
   host: HTMLElement;
-  setValue: (hex: string) => void;
+  setValue: (color: MTextColor) => void;
   setTheme: (theme: MTextToolbarTheme) => void;
   dispose: () => void;
 }
@@ -191,6 +193,30 @@ function colorNumberToHex(color: number | null): string {
 function hexToColorNumber(hex: string): number {
   if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return 0xffffff;
   return Number.parseInt(hex.slice(1), 16);
+}
+
+function mtextColorToHex(color: MTextColor): string {
+  if (color.isRgb && color.rgbValue !== null) {
+    return colorNumberToHex(color.rgbValue);
+  }
+  if (color.isAci && color.aci !== null) {
+    return colorNumberToHex(getColorByIndex(color.aci));
+  }
+  return '#ffffff';
+}
+
+function formatToMTextColor(format: CharFormat): MTextColor {
+  const color = new MTextColor();
+  if (format.aci !== null && Number.isFinite(format.aci)) {
+    color.aci = format.aci;
+    return color;
+  }
+  if (format.rgb !== null) {
+    color.rgbValue = normalizeColorNumber(format.rgb);
+    return color;
+  }
+  color.rgbValue = 0xffffff;
+  return color;
 }
 
 function normalizeHexColor(hex: string): string | null {
@@ -357,8 +383,8 @@ export class MTextToolbar {
     this.ensureSelectValue(format.fontFamily);
     this.controls.fontSize.value = String(Math.max(1, Math.round(format.fontSize)));
 
-    const color = format.rgb !== null ? format.rgb : 0xffffff;
-    this.colorPicker.setValue(colorNumberToHex(color));
+    const color = formatToMTextColor(format);
+    this.colorPicker.setValue(color);
 
     this.setToggleState(this.controls.boldBtn, format.bold);
     this.setToggleState(this.controls.italicBtn, format.italic);
@@ -465,8 +491,8 @@ export class MTextToolbar {
       });
       return {
         host: input,
-        setValue: (hex) => {
-          const normalized = normalizeHexColor(hex);
+        setValue: (color) => {
+          const normalized = normalizeHexColor(mtextColorToHex(color));
           if (normalized) input.value = normalized;
         },
         setTheme: () => {},
@@ -490,10 +516,8 @@ export class MTextToolbar {
     const typed = (instance ?? {}) as MTextToolbarColorPickerInstance;
     return {
       host,
-      setValue: (hex) => {
-        const normalized = normalizeHexColor(hex);
-        if (!normalized) return;
-        typed.setValue?.(normalized);
+      setValue: (color) => {
+        typed.setValue?.(color);
       },
       setTheme: (theme) => {
         typed.setTheme?.(theme);

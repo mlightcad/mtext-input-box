@@ -1,4 +1,5 @@
 import type { Box, CursorStyle, SelectionStyle } from '@mlightcad/text-box-cursor';
+import type { MTextColor } from '@mlightcad/mtext-parser';
 import type * as THREE from 'three';
 
 /** Vertical script style for a character run. */
@@ -132,8 +133,8 @@ export interface MTextToolbarColorPickerContext {
 
 /** Lifecycle hooks for a custom toolbar color picker. */
 export interface MTextToolbarColorPickerInstance {
-  /** Sync picker UI when editor format changes. */
-  setValue?: (hexColor: string) => void;
+  /** Sync picker UI when editor format changes (color may be ACI or RGB). */
+  setValue?: (color: MTextColor) => void;
   /** Sync picker UI when toolbar theme changes. */
   setTheme?: (theme: MTextToolbarTheme) => void;
   /** Cleanup mounted resources when toolbar is disposed. */
