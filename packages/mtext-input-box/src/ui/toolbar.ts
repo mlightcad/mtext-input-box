@@ -5,7 +5,7 @@ import type {
   MTextToolbarTheme
 } from '../viewer/types';
 import { getColorByIndex } from '@mlightcad/mtext-renderer';
-import { MTextColor } from '@mlightcad/mtext-parser';
+import { MTextColor } from '@mlightcad/mtext-renderer';
 import { toolbarIcons, type ToolbarIconName } from './icons';
 
 export interface ToolbarOptions {
@@ -14,13 +14,17 @@ export interface ToolbarOptions {
   theme: MTextToolbarTheme;
   fontFamilies?: string[];
   colorPicker?: MTextToolbarColorPickerFactory;
+  initialFormat?: CharFormat;
   onFormatChange: (partial: Partial<CharFormat>) => void;
   onToggleStack: () => void;
   onToggleSuperscript?: () => boolean;
   onToggleSubscript?: () => boolean;
 }
 
-export type ToolbarSessionOptions = Omit<ToolbarOptions, 'container' | 'theme' | 'fontFamilies' | 'colorPicker'>;
+export type ToolbarSessionOptions = Omit<
+  ToolbarOptions,
+  'container' | 'theme' | 'fontFamilies' | 'colorPicker' | 'initialFormat'
+>;
 
 interface ToolbarControls {
   fontFamily: HTMLSelectElement;
@@ -142,6 +146,9 @@ function ensureToolbarStyles(): void {
 .ml-mtext-toolbar__color {
   width: 40px;
   padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .ml-mtext-toolbar__btn {
   width: 34px;
@@ -203,6 +210,12 @@ function mtextColorToHex(color: MTextColor): string {
     return colorNumberToHex(getColorByIndex(color.aci));
   }
   return '#ffffff';
+}
+
+function hexToMTextColor(hex: string): MTextColor {
+  const color = new MTextColor();
+  color.rgbValue = hexToColorNumber(hex);
+  return color;
 }
 
 function formatToMTextColor(format: CharFormat): MTextColor {
@@ -293,7 +306,7 @@ export class MTextToolbar {
     fontSize.max = '1024';
     fontSize.step = '1';
 
-    this.colorPicker = this.createColorPicker(options.colorPicker);
+    this.colorPicker = this.createColorPicker(options.colorPicker, options.initialFormat);
     typographyGroup.append(fontFamily, fontSize, this.colorPicker.host);
 
     const separator1 = document.createElement('div');
@@ -480,14 +493,17 @@ export class MTextToolbar {
     });
   }
 
-  private createColorPicker(factory?: MTextToolbarColorPickerFactory): ToolbarColorPickerBinding {
+  private createColorPicker(
+    factory?: MTextToolbarColorPickerFactory,
+    initialFormat?: CharFormat
+  ): ToolbarColorPickerBinding {
     if (!factory) {
       const input = document.createElement('input');
       input.className = 'ml-mtext-toolbar__color';
       input.type = 'color';
       input.dataset.mlMtextToolbarInteractive = 'true';
       input.addEventListener('input', () => {
-        this.applyColorChange(input.value);
+        this.applyColorChange(hexToMTextColor(input.value));
       });
       return {
         host: input,
@@ -504,12 +520,13 @@ export class MTextToolbar {
     host.className = 'ml-mtext-toolbar__color';
     host.dataset.mlMtextToolbarInteractive = 'true';
 
+    const initialColor = initialFormat ? formatToMTextColor(initialFormat) : hexToMTextColor('#ffffff');
     const instance = factory({
       container: host,
       theme: this.theme,
-      initialColor: '#ffffff',
-      onChange: (hex) => {
-        this.applyColorChange(hex);
+      initialColor,
+      onChange: (color) => {
+        this.applyColorChange(color);
       }
     });
 
@@ -528,12 +545,23 @@ export class MTextToolbar {
     };
   }
 
-  private applyColorChange(hex: string): void {
-    const normalized = normalizeHexColor(hex);
-    if (!normalized) return;
+  private applyColorChange(color: MTextColor): void {
+    if (color.isAci && color.aci !== null) {
+      this.onFormatChange({
+        aci: color.aci
+      });
+      return;
+    }
+    if (color.isRgb && color.rgbValue !== null) {
+      this.onFormatChange({
+        aci: null,
+        rgb: normalizeColorNumber(color.rgbValue)
+      });
+      return;
+    }
     this.onFormatChange({
       aci: null,
-      rgb: hexToColorNumber(normalized)
+      rgb: 0xffffff
     });
   }
 }

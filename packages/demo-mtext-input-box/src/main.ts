@@ -7,7 +7,7 @@ import {
 import { diffWordsWithSpace } from 'diff';
 import { ElColorPicker } from 'element-plus';
 import 'element-plus/dist/index.css';
-import { MTextColor } from '@mlightcad/mtext-parser';
+import { MTextColor } from '@mlightcad/mtext-renderer';
 import { getColorByIndex } from '@mlightcad/mtext-renderer';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -35,31 +35,16 @@ function requireNode<T>(node: T | null, id: string): T {
   return node;
 }
 
-function normalizeColorNumber(color: number): number {
-  return Math.max(0, Math.min(0xffffff, Math.round(color)));
-}
-
-function colorNumberToHex(color: number | null): string {
+function colorNumberToCssHex(color: number | null): string {
   if (color === null) return '-';
-  return `#${normalizeColorNumber(color).toString(16).padStart(6, '0')}`;
+  return `#${new THREE.Color(color).getHexString()}`;
 }
 
-function normalizeHexColor(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const normalized = value.trim().toLowerCase();
-  if (/^#[0-9a-f]{6}$/.test(normalized)) return normalized;
-  if (/^[0-9a-f]{6}$/.test(normalized)) return `#${normalized}`;
-  return null;
-}
-
-function mtextColorToHex(color: MTextColor): string {
-  if (color.isRgb && color.rgbValue !== null) {
-    return colorNumberToHex(color.rgbValue);
-  }
+function mtextColorToCss(color: MTextColor): string {
   if (color.isAci && color.aci !== null) {
-    return colorNumberToHex(getColorByIndex(color.aci));
+    return `#${new THREE.Color(getColorByIndex(color.aci)).getHexString()}`;
   }
-  return '#ffffff';
+  return color.toCssColor() ?? '#ffffff';
 }
 
 const createElementPlusToolbarColorPicker: MTextToolbarColorPickerFactory = ({
@@ -68,7 +53,8 @@ const createElementPlusToolbarColorPicker: MTextToolbarColorPickerFactory = ({
   theme,
   onChange
 }) => {
-  const colorRef = ref(normalizeHexColor(initialColor) ?? '#ffffff');
+  const initialCssColor = mtextColorToCss(initialColor);
+  const colorRef = ref(initialCssColor);
   const themeRef = ref<MTextToolbarTheme>(theme);
 
   const PickerRoot = defineComponent({
@@ -78,10 +64,10 @@ const createElementPlusToolbarColorPicker: MTextToolbarColorPickerFactory = ({
         h(ElColorPicker, {
           modelValue: colorRef.value,
           'onUpdate:modelValue': (value: string | null) => {
-            const normalized = normalizeHexColor(value);
-            if (!normalized) return;
-            colorRef.value = normalized;
-            onChange(normalized);
+            const nextColor = MTextColor.fromCssColor(value);
+            if (!nextColor) return;
+            colorRef.value = value ?? '#ffffff';
+            onChange(nextColor);
           },
           colorFormat: 'hex',
           showAlpha: false,
@@ -96,7 +82,7 @@ const createElementPlusToolbarColorPicker: MTextToolbarColorPickerFactory = ({
 
   return {
     setValue: (nextColor: MTextColor) => {
-      colorRef.value = mtextColorToHex(nextColor);
+      colorRef.value = mtextColorToCss(nextColor);
     },
     setTheme: (nextTheme: MTextToolbarTheme) => {
       themeRef.value = nextTheme;
@@ -233,17 +219,17 @@ controls.screenSpacePanning = true;
 controls.minZoom = 0.3;
 controls.maxZoom = 5;
 
-const defaultFormat = {
-  fontFamily: 'simkai',
-  fontSize: 22,
-  bold: false,
-  italic: false,
-  underline: false,
-  overline: false,
-  strike: false,
-  script: 'normal' as const,
-  aci: null,
-  rgb: 0xffffff
+const textStyle = {
+  name: 'DemoTextStyle',
+  standardFlag: 0,
+  fixedTextHeight: 22,
+  widthFactor: 1,
+  obliqueAngle: 0,
+  textGenerationFlag: 0,
+  lastHeight: 22,
+  font: 'simkai',
+  bigFont: '',
+  color: 0xffffff
 };
 
 function createDemoEditor(options: {
@@ -265,13 +251,17 @@ function createDemoEditor(options: {
       width: Math.max(1, options.width),
       position: origin.clone(),
       initialText: options.initialText,
-      defaultFormat,
+      textStyle,
       imeTarget: canvas,
       toolbar: {
         enabled: true,
         theme: options.toolbarTheme ?? 'dark',
         offsetY: 12,
         colorPicker: createElementPlusToolbarColorPicker
+      },
+      colorSettings: {
+        byBlockColor: 0xFF,
+        byLayerColor: 0xFF,
       }
     })
   };
@@ -644,10 +634,10 @@ function updateStatus(): void {
     JSON.stringify(state.currentFormat, null, 2),
     '',
     `Current ACI: ${state.currentFormat.aci === null ? 'null' : state.currentFormat.aci}`,
-    `Current RGB (hex): ${colorNumberToHex(state.currentFormat.rgb)}`,
+    `Current RGB (hex): ${colorNumberToCssHex(state.currentFormat.rgb)}`,
     'Default Text Style:',
     JSON.stringify(defaultTextStyle, null, 2),
-    `Default Text Style Color (hex): ${colorNumberToHex(defaultTextStyle.color)}`
+    `Default Text Style Color (hex): ${colorNumberToCssHex(defaultTextStyle.color)}`
   ].join('\n');
 }
 

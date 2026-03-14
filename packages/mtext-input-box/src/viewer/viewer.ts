@@ -13,13 +13,15 @@ import {
   UnifiedRenderer,
   MTextAttachmentPoint,
   MTextFlowDirection,
+  MText,
+  type ColorSettings,
   type MTextData,
   type MTextObject,
   type TextStyle
 } from '@mlightcad/mtext-renderer';
 import * as THREE from 'three';
-import { MTextContext, MTextLineAlignment } from '@mlightcad/mtext-parser';
-import { defaultCharFormat, sameFormat } from './format';
+import { MTextContext, MTextLineAlignment } from '@mlightcad/mtext-renderer';
+import { DEFAULT_FONT_FAMILY, defaultCharFormat, sameFormat } from './format';
 import { MTextDocument, type MTextAst, type MTextStyle } from '../model';
 import { EditorUiAdapter } from '../controller';
 import { MTextToolbar, type ToolbarOptions, type ToolbarSessionOptions } from '../ui/toolbar';
@@ -60,6 +62,18 @@ export class MTextInputBox {
   private readonly mtextRenderer: UnifiedRenderer;
   private readonly cursorRenderer: CursorRenderer;
   private static readonly FALLBACK_LINE_ADVANCE_RATIO = 1.5;
+  private static readonly DEFAULT_TEXT_STYLE: TextStyle = {
+    name: 'MTextInputBoxStyle',
+    standardFlag: 0,
+    fixedTextHeight: 24,
+    widthFactor: 1,
+    obliqueAngle: 0,
+    textGenerationFlag: 0,
+    lastHeight: 24,
+    font: DEFAULT_FONT_FAMILY,
+    bigFont: '',
+    color: 0xffffff
+  };
 
   private width: number;
   private position: THREE.Vector3;
@@ -87,9 +101,12 @@ export class MTextInputBox {
   private boundingBoxPadding = 1;
   private boundingBoxZOffset = 0.01;
   private rendererReady = false;
+  private pendingFontLoad: Promise<void> | null = null;
+  private lastFontKey = '';
   private toolbarTheme: MTextToolbarTheme = 'dark';
   private toolbarOffsetY = 10;
   private debugMode = false;
+  private readonly colorSettings: ColorSettings | undefined;
   private debugVisibility: DebugVisibility = {
     showCharBoxes: true,
     showLineIndices: true,
@@ -258,13 +275,36 @@ export class MTextInputBox {
     this.toolbarContainer = options.toolbar?.container ?? null;
     this.toolbarFontFamilies = options.toolbar?.fontFamilies ?? null;
     this.toolbarColorPicker = options.toolbar?.colorPicker;
+    this.colorSettings = options.colorSettings;
     this.width = Math.max(1, options.width);
     this.position = options.position?.clone() ?? new THREE.Vector3(0, 0, 0);
     this.enableWordWrap = options.enableWordWrap ?? true;
 
-    this.baseFormat = { ...defaultCharFormat(), ...(options.defaultFormat ?? {}) };
+    const textStyle = options.textStyle ?? MTextInputBox.DEFAULT_TEXT_STYLE;
+    const fixedTextHeight = Math.max(
+      1,
+      Number.isFinite(textStyle.fixedTextHeight)
+        ? textStyle.fixedTextHeight
+        : MTextInputBox.DEFAULT_TEXT_STYLE.fixedTextHeight
+    );
+    const lastHeight = Math.max(1, Number.isFinite(textStyle.lastHeight) ? textStyle.lastHeight : fixedTextHeight);
+    const color = Number.isFinite(textStyle.color)
+      ? textStyle.color
+      : MTextInputBox.DEFAULT_TEXT_STYLE.color;
+    this.defaultTextStyle = {
+      ...textStyle,
+      fixedTextHeight,
+      lastHeight,
+      widthFactor: Number.isFinite(textStyle.widthFactor) ? textStyle.widthFactor : 1,
+      obliqueAngle: Number.isFinite(textStyle.obliqueAngle) ? textStyle.obliqueAngle : 0,
+      textGenerationFlag: Number.isFinite(textStyle.textGenerationFlag) ? textStyle.textGenerationFlag : 0,
+      standardFlag: Number.isFinite(textStyle.standardFlag) ? textStyle.standardFlag : 0,
+      font: textStyle.font || MTextInputBox.DEFAULT_TEXT_STYLE.font,
+      bigFont: textStyle.bigFont ?? '',
+      color: this.normalizeColorNumber(color)
+    };
+    this.baseFormat = this.createBaseFormatFromTextStyle(this.defaultTextStyle);
     this.currentFormat = { ...this.baseFormat };
-    this.defaultTextStyle = this.createDefaultTextStyle();
 
     this.document = new MTextDocument();
     this.uiAdapter = new EditorUiAdapter(this.document);
@@ -275,6 +315,9 @@ export class MTextInputBox {
           ? options.workerUrl
           : options.workerUrl?.toString() ?? './assets/mtext-renderer-worker.js'
     });
+    if (options.fontUrl) {
+      this.mtextRenderer.setFontUrl(options.fontUrl);
+    }
 
     this.cursorLogic = new TextBoxCursor({
       containerBox: { x: 0, y: 0, width: this.width, height: 1 },
@@ -606,7 +649,7 @@ export class MTextInputBox {
     return { ...this.currentFormat };
   }
 
-  /** Returns renderer default text style derived from `defaultFormat`. */
+  /** Returns renderer default text style defined by `textStyle`. */
   public getDefaultTextStyle(): TextStyle {
     return { ...this.defaultTextStyle };
   }
@@ -980,7 +1023,8 @@ export class MTextInputBox {
       const toolbarOptions: ToolbarOptions = {
         ...this.createToolbarSessionOptions(target),
         container,
-        theme: this.toolbarTheme
+        theme: this.toolbarTheme,
+        initialFormat: this.currentFormat
       };
       if (this.toolbarFontFamilies) {
         toolbarOptions.fontFamilies = this.toolbarFontFamilies;
@@ -1128,8 +1172,9 @@ export class MTextInputBox {
 
   private async initializeRenderer(): Promise<void> {
     try {
-      await this.mtextRenderer.loadFonts(['simkai']);
+      await this.mtextRenderer.loadFonts([DEFAULT_FONT_FAMILY]);
       this.rendererReady = true;
+      this.ensureFontsLoaded();
       this.relayout();
     } catch (error) {
       console.error('[mtext-input-box] Failed to initialize mtext renderer fonts', error);
@@ -1145,16 +1190,16 @@ export class MTextInputBox {
       return;
     }
 
+    this.ensureFontsLoaded();
+
     try {
       const mtextData = this.createMTextData();
       const style = this.createTextStyle();
+      const colorSettings = this.resolveRenderColorSettings();
       const object = this.mtextRenderer.syncRenderMText(
         mtextData,
         style,
-        {
-          byLayerColor: 0xffffff,
-          byBlockColor: 0xffffff
-        }
+        colorSettings
       );
 
       this.replaceRenderedObject(object);
@@ -1171,6 +1216,52 @@ export class MTextInputBox {
       this.updateCursorData(fallback.charBoxes, fallback.lineBreakIndices, fallback.lineLayouts);
       this.updateBoundingBoxGeometry();
     }
+  }
+
+  private ensureFontsLoaded(): void {
+    if (this.pendingFontLoad) return;
+    const fonts = this.collectFontNamesForText();
+    const key = fonts.map((font) => font.toLowerCase()).sort().join('|');
+    if (!key || key === this.lastFontKey) return;
+    this.lastFontKey = key;
+    this.pendingFontLoad = this.mtextRenderer
+      .loadFonts(fonts)
+      .then(() => undefined)
+      .catch((error) => {
+        console.warn('[mtext-input-box] Failed to load fonts for MTEXT', error);
+      })
+      .finally(() => {
+        this.pendingFontLoad = null;
+        if (this.rendererReady) this.relayout();
+      });
+  }
+
+  private collectFontNamesForText(): string[] {
+    const fonts = new Set<string>();
+    const addFont = (name?: string): void => {
+      if (!name) return;
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      fonts.add(trimmed);
+    };
+
+    addFont(this.defaultTextStyle.font);
+    addFont(this.defaultTextStyle.bigFont);
+
+    try {
+      const fromContent = MText.getFonts(this.mtextString || '', true);
+      for (const fontName of fromContent) {
+        addFont(fontName);
+      }
+    } catch (error) {
+      console.warn('[mtext-input-box] Failed to parse fonts from MTEXT', error);
+    }
+
+    if (fonts.size === 0) {
+      fonts.add(DEFAULT_FONT_FAMILY);
+    }
+
+    return [...fonts];
   }
 
   private updateCursorData(
@@ -1490,20 +1581,14 @@ export class MTextInputBox {
         ? this.normalizeColorNumber(format.rgb)
         : 0xffffff;
   }
-  private createDefaultTextStyle(): TextStyle {
-    const baseSize = Math.max(1, this.baseFormat.fontSize);
-    return {
-      name: 'MTextInputBoxStyle',
-      standardFlag: 0,
-      fixedTextHeight: baseSize,
-      widthFactor: 1,
-      obliqueAngle: 0,
-      textGenerationFlag: 0,
-      lastHeight: baseSize,
-      font: this.baseFormat.fontFamily || 'simkai',
-      bigFont: '',
-      color: this.resolveFormatColorNumber(this.baseFormat)
-    };
+
+  private createBaseFormatFromTextStyle(style: TextStyle): CharFormat {
+    const base = defaultCharFormat();
+    base.fontFamily = style.font || base.fontFamily;
+    base.fontSize = Math.max(1, style.fixedTextHeight);
+    base.rgb = this.normalizeColorNumber(style.color);
+    base.aci = null;
+    return base;
   }
 
   private createMTextData(): MTextData {
@@ -1529,6 +1614,14 @@ export class MTextInputBox {
 
   private createTextStyle(): TextStyle {
     return { ...this.defaultTextStyle };
+  }
+
+  private resolveRenderColorSettings(): ColorSettings {
+    if (this.colorSettings) {
+      return this.colorSettings;
+    }
+    const base = this.toolbarTheme === 'light' ? 0x000000 : 0xffffff;
+    return { byLayerColor: base, byBlockColor: base };
   }
 
 
@@ -2294,10 +2387,10 @@ export class MTextInputBox {
     context.fontFace.style = this.baseFormat.italic ? 'Italic' : 'Regular';
     context.fontFace.weight = this.baseFormat.bold ? 700 : 400;
 
-    // Relative cap height keeps parser defaults aligned with editor base text height.
-    context.capHeight = { value: 1, isRelative: true };
-    context.align = MTextLineAlignment.MIDDLE;
-    context.widthFactor = { value: this.defaultTextStyle.widthFactor ?? 1, isRelative: true };
+    // Align parser defaults with renderer: absolute cap height based on text style.
+    context.capHeight = { value: this.defaultTextStyle.fixedTextHeight, isRelative: false };
+    context.align = MTextLineAlignment.BOTTOM;
+    context.widthFactor = { value: this.defaultTextStyle.widthFactor ?? 1, isRelative: false };
 
     if (this.isExplicitAci(this.baseFormat.aci)) {
       context.aci = this.baseFormat.aci;

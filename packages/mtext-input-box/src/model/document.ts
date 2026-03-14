@@ -1,4 +1,4 @@
-import { MTextContext } from '@mlightcad/mtext-parser';
+import { MTextContext } from '@mlightcad/mtext-renderer';
 import {
   buildMTextFromAst,
   deleteRangeInAst,
