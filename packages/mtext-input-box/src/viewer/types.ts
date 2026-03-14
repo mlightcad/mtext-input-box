@@ -1,5 +1,5 @@
 import type { Box, CursorStyle, SelectionStyle } from '@mlightcad/text-box-cursor';
-import type { MTextColor } from '@mlightcad/mtext-parser';
+import type { ColorSettings, MTextColor, TextStyle } from '@mlightcad/mtext-renderer';
 import type * as THREE from 'three';
 
 /** Vertical script style for a character run. */
@@ -125,10 +125,10 @@ export interface MTextToolbarColorPickerContext {
   container: HTMLElement;
   /** Current toolbar theme. */
   theme: MTextToolbarTheme;
-  /** Initial color as hex string (`#RRGGBB`). */
-  initialColor: string;
-  /** Call when user picks a new color. */
-  onChange: (hexColor: string) => void;
+  /** Initial color (may be ACI or RGB). */
+  initialColor: MTextColor;
+  /** Call when user picks a new color (ACI or RGB). */
+  onChange: (color: MTextColor) => void;
 }
 
 /** Lifecycle hooks for a custom toolbar color picker. */
@@ -174,13 +174,13 @@ export interface MTextInputBoxOptions {
   /** Optional world-space origin of the editor container. */
   position?: THREE.Vector3;
   /**
-   * Single default style source for the component.
+   * Default text style passed to `@mlightcad/mtext-renderer`.
    *
    * It is used for:
-   * - insertion format of newly typed characters
-   * - derived fallback text style passed to `@mlightcad/mtext-renderer`
+   * - fallback text style passed to the renderer
+   * - base insertion format derived from the style
    */
-  defaultFormat?: Partial<CharFormat>;
+  textStyle?: TextStyle;
   /** Partial cursor style overrides forwarded to cursor renderer. */
   cursorStyle?: Partial<CursorStyle>;
   /** Partial selection style overrides forwarded to cursor renderer. */
@@ -189,6 +189,8 @@ export interface MTextInputBoxOptions {
   enableWordWrap?: boolean;
   /** Optional worker URL used by renderer implementations that support workers. */
   workerUrl?: string | URL;
+  /** Optional base URL for font loading (overrides renderer default). */
+  fontUrl?: string;
   /** Element used for built-in IME bridge attachment. */
   imeTarget: HTMLElement;
   /** Whether to render a visible editor bounding box overlay. */
@@ -197,6 +199,8 @@ export interface MTextInputBoxOptions {
   boundingBoxStyle?: MTextBoundingBoxStyle;
   /** Built-in toolbar configuration (DOM overlay). */
   toolbar?: MTextToolbarOptions;
+  /** Optional ACI color settings for byLayer (256) and byBlock (0). */
+  colorSettings?: ColorSettings;
 }
 
 /** Directional cursor movement commands. */

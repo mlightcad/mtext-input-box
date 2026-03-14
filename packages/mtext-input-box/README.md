@@ -42,16 +42,17 @@ const editor = new MTextInputBox({
   position: new THREE.Vector3(80, 520, 0),
   initialText: 'Hello\\PWorld',
   imeTarget: canvas,
-  defaultFormat: {
-    fontFamily: 'monospace',
-    fontSize: 24,
-    bold: false,
-    italic: false,
-    underline: false,
-    overline: false,
-    strike: false,
-    aci: null,
-    rgb: 0xffffff
+  textStyle: {
+    name: 'MTextInputBoxStyle',
+    standardFlag: 0,
+    fixedTextHeight: 24,
+    widthFactor: 1,
+    obliqueAngle: 0,
+    textGenerationFlag: 0,
+    lastHeight: 24,
+    font: 'simkai',
+    bigFont: '',
+    color: 0xffffff
   },
   toolbar: {
     enabled: true,
@@ -89,8 +90,8 @@ Custom color picker factory context:
 
 - `container: HTMLElement`: mount point for your UI.
 - `theme: 'light' | 'dark'`: current toolbar theme.
-- `initialColor: '#RRGGBB'`: initial color.
-- `onChange(hexColor)`: call this when user picks a new color.
+- `initialColor: MTextColor`: initial color (ACI or RGB). It reflects the active editor format at toolbar creation time.
+- `onChange(color: MTextColor)`: call this when user picks a new color (ACI or RGB).
 
 Custom color picker instance methods:
 
@@ -102,29 +103,27 @@ Example (mount a Vue color picker):
 
 ```ts
 import { createApp, h, ref } from 'vue';
-import { getColorByIndex } from '@mlightcad/mtext-renderer';
-import { MTextColor } from '@mlightcad/mtext-parser';
+import { getColorByIndex, MTextColor } from '@mlightcad/mtext-renderer';
 
 toolbar: {
   colorPicker: ({ container, initialColor, theme, onChange }) => {
-    const color = ref(initialColor);
-    const toHex = (value: MTextColor) => {
-      if (value.isRgb && value.rgbValue !== null) {
-        return `#${value.rgbValue.toString(16).padStart(6, '0')}`;
-      }
+    const toCssColor = (value: MTextColor) => {
       if (value.isAci && value.aci !== null) {
         return `#${getColorByIndex(value.aci).toString(16).padStart(6, '0')}`;
       }
-      return '#ffffff';
+      return value.toCssColor() ?? '#ffffff';
     };
+    const color = ref(toCssColor(initialColor));
     const app = createApp({
       render() {
         return h(MyVueColorPicker, {
           modelValue: color.value,
           theme,
           'onUpdate:modelValue': (next: string) => {
+            const nextColor = MTextColor.fromCssColor(next);
+            if (!nextColor) return;
             color.value = next;
-            onChange(next);
+            onChange(nextColor);
           }
         });
       }
@@ -134,7 +133,7 @@ toolbar: {
 
     return {
       setValue(next: MTextColor) {
-        color.value = toHex(next);
+        color.value = toCssColor(next);
       },
       setTheme(nextTheme: 'light' | 'dark') {
         // Optional: forward theme into your picker state if needed.
@@ -163,12 +162,13 @@ Public toolbar-related methods:
 
 ## Important Options
 
-- `defaultFormat`: base insert format and renderer fallback style source.
+- `textStyle`: default text style passed to the renderer and used to derive base insert format.
 - `imeTarget`: element used by built-in IME bridge and built-in pointer interactions.
 - `enableWordWrap?: boolean`: enable/disable editor-side wrapping behavior.
 - `showBoundingBox?: boolean`: show editor boundary rectangle.
 - `boundingBoxStyle?: { color?, opacity?, padding?, zOffset? }`: boundary style overrides.
 - `workerUrl?: string | URL`: worker URL for renderer initialization.
+- `fontUrl?: string`: optional base URL for font loading (overrides renderer default).
 - `cursorStyle` / `selectionStyle`: forwarded to cursor renderer.
 - `toolbar`: built-in toolbar options (`enabled`, `theme`, `fontFamilies`, `colorPicker`, `container`, `offsetY`).
 

@@ -22,7 +22,7 @@ vi.mock('@mlightcad/mtext-renderer', () => {
   };
 });
 
-vi.mock('@mlightcad/mtext-parser', () => {
+vi.mock('@mlightcad/mtext-renderer', () => {
   class MTextContext {}
   return {
     MTextContext,

@@ -1,9 +1,11 @@
 import type { CharFormat } from './types';
 
+export const DEFAULT_FONT_FAMILY = 'simkai';
+
 /** Returns default character format. */
 export function defaultCharFormat(): CharFormat {
   return {
-    fontFamily: 'monospace',
+    fontFamily: DEFAULT_FONT_FAMILY,
     fontSize: 24,
     bold: false,
     italic: false,
