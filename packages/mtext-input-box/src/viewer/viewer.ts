@@ -14,6 +14,7 @@ import {
   MTextAttachmentPoint,
   MTextFlowDirection,
   MText,
+  MTextColor,
   type ColorSettings,
   type MTextData,
   type MTextObject,
@@ -71,8 +72,7 @@ export class MTextInputBox {
     textGenerationFlag: 0,
     lastHeight: 24,
     font: DEFAULT_FONT_FAMILY,
-    bigFont: '',
-    color: 0xffffff
+    bigFont: ''
   };
 
   private width: number;
@@ -288,9 +288,6 @@ export class MTextInputBox {
         : MTextInputBox.DEFAULT_TEXT_STYLE.fixedTextHeight
     );
     const lastHeight = Math.max(1, Number.isFinite(textStyle.lastHeight) ? textStyle.lastHeight : fixedTextHeight);
-    const color = Number.isFinite(textStyle.color)
-      ? textStyle.color
-      : MTextInputBox.DEFAULT_TEXT_STYLE.color;
     this.defaultTextStyle = {
       ...textStyle,
       fixedTextHeight,
@@ -300,10 +297,9 @@ export class MTextInputBox {
       textGenerationFlag: Number.isFinite(textStyle.textGenerationFlag) ? textStyle.textGenerationFlag : 0,
       standardFlag: Number.isFinite(textStyle.standardFlag) ? textStyle.standardFlag : 0,
       font: textStyle.font || MTextInputBox.DEFAULT_TEXT_STYLE.font,
-      bigFont: textStyle.bigFont ?? '',
-      color: this.normalizeColorNumber(color)
+      bigFont: textStyle.bigFont ?? ''
     };
-    this.baseFormat = this.createBaseFormatFromTextStyle(this.defaultTextStyle);
+    this.baseFormat = this.createBaseFormatFromTextStyle(this.defaultTextStyle, this.resolveRenderColorSettings());
     this.currentFormat = { ...this.baseFormat };
 
     this.document = new MTextDocument();
@@ -1574,20 +1570,33 @@ export class MTextInputBox {
     return 0xffffff;
   }
 
-  private resolveFormatColorNumber(format: CharFormat): number {
-    return this.isExplicitAci(format.aci)
-      ? this.resolveAciColor(format.aci)
-      : format.rgb !== null
-        ? this.normalizeColorNumber(format.rgb)
-        : 0xffffff;
+  private resolveBaseFormatColor(colorSettings: ColorSettings): { aci: number | null; rgb: number | null } {
+    const color = colorSettings.color;
+    if (color.isRgb && color.rgbValue !== null) {
+      return { aci: null, rgb: this.normalizeColorNumber(color.rgbValue) };
+    }
+
+    if (color.isAci && color.aci !== null) {
+      const aci = color.aci;
+      if (Number.isInteger(aci) && aci >= 1 && aci <= 255) {
+        return { aci, rgb: null };
+      }
+      if (aci === 0) {
+        return { aci: null, rgb: this.normalizeColorNumber(colorSettings.byBlockColor) };
+      }
+      return { aci: null, rgb: this.normalizeColorNumber(colorSettings.byLayerColor) };
+    }
+
+    return { aci: null, rgb: this.normalizeColorNumber(colorSettings.byLayerColor) };
   }
 
-  private createBaseFormatFromTextStyle(style: TextStyle): CharFormat {
+  private createBaseFormatFromTextStyle(style: TextStyle, colorSettings: ColorSettings): CharFormat {
     const base = defaultCharFormat();
     base.fontFamily = style.font || base.fontFamily;
     base.fontSize = Math.max(1, style.fixedTextHeight);
-    base.rgb = this.normalizeColorNumber(style.color);
-    base.aci = null;
+    const color = this.resolveBaseFormatColor(colorSettings);
+    base.aci = color.aci;
+    base.rgb = color.rgb;
     return base;
   }
 
@@ -1621,7 +1630,7 @@ export class MTextInputBox {
       return this.colorSettings;
     }
     const base = this.toolbarTheme === 'light' ? 0x000000 : 0xffffff;
-    return { byLayerColor: base, byBlockColor: base };
+    return { byLayerColor: base, byBlockColor: base, color: new MTextColor(256) };
   }
 
 
@@ -1958,7 +1967,7 @@ export class MTextInputBox {
   private syncDocumentFromUiState(): void {
     const selection = this.getSelectionRange();
     if (!selection.isCollapsed) {
-      const start = this.toDocumentIndexFromLogicalIndex(selection.start, false);
+      const start = this.toDocumentIndexFromLogicalIndex(selection.start, true);
       const end = this.toDocumentIndexFromLogicalIndex(selection.end, false);
       this.document.setSelection(start, end);
       return;
@@ -1994,7 +2003,7 @@ export class MTextInputBox {
     this.commitHistoryEdit(() => {
       this.syncDocumentFromUiState();
 
-      const start = this.toDocumentIndexFromLogicalIndex(selection.start, false);
+      const start = this.toDocumentIndexFromLogicalIndex(selection.start, true);
       const end = this.toDocumentIndexFromLogicalIndex(selection.end, false);
       if (end <= start) return;
 
@@ -2049,7 +2058,7 @@ export class MTextInputBox {
     this.commitHistoryEdit(() => {
       this.syncDocumentFromUiState();
 
-      const start = this.toDocumentIndexFromLogicalIndex(selection.start, false);
+      const start = this.toDocumentIndexFromLogicalIndex(selection.start, true);
       const end = this.toDocumentIndexFromLogicalIndex(selection.end, false);
       if (end <= start) return;
 
@@ -2244,7 +2253,7 @@ export class MTextInputBox {
       return;
     }
 
-    const start = this.toDocumentIndexFromLogicalIndex(selection.start, false);
+    const start = this.toDocumentIndexFromLogicalIndex(selection.start, true);
     const end = this.toDocumentIndexFromLogicalIndex(selection.end, false);
     const selectedNodes = this.document.ast.nodes.slice(start, end);
     const active =
@@ -2277,6 +2286,11 @@ export class MTextInputBox {
 
     const node = this.getNodeByLogicalCharIndex(anchorIndex);
     if (!node) return null;
+
+    if (node.type === 'stack' && this.isScriptOnlyStack(node)) {
+      const script = node.numerator.trim().length > 0 ? 'superscript' : 'subscript';
+      return { ...this.toCharFormat(node.style), script };
+    }
 
     return this.toCharFormat(node.style);
   }
@@ -2363,13 +2377,18 @@ export class MTextInputBox {
       rgb: resolvedColor
     };
   }
-  private toScriptFromStyle(style: MTextStyle, baseSize: number, capHeight: number): CharFormat['script'] {
-    if (style.script && style.script !== 'normal') {
-      return style.script;
-    }
 
+  private toScriptFromStyle(style: MTextStyle, baseSize: number, capHeight: number): CharFormat['script'] {
     const reducedThreshold = Math.max(1, baseSize) * 0.9;
     const isReduced = capHeight <= reducedThreshold;
+
+    if (style.script && style.script !== 'normal') {
+      // Guard against styles that inherit baseline alignment (BOTTOM/TOP) but
+      // are not actual superscript/subscript runs. Only treat non-normal script
+      // as active when the cap height is reduced.
+      if (isReduced) return style.script;
+      return 'normal';
+    }
 
     if (isReduced && style.align === MTextLineAlignment.TOP) {
       return 'superscript';
