@@ -30,6 +30,7 @@ pnpm add @mlightcad/mtext-input-box three @mlightcad/mtext-parser @mlightcad/mte
 ```ts
 import * as THREE from 'three';
 import { MTextInputBox } from '@mlightcad/mtext-input-box';
+import { MTextColor } from '@mlightcad/mtext-renderer';
 
 const scene = new THREE.Scene();
 const camera = new THREE.OrthographicCamera(0, 1000, 600, 0, -1000, 1000);
@@ -51,8 +52,12 @@ const editor = new MTextInputBox({
     textGenerationFlag: 0,
     lastHeight: 24,
     font: 'simkai',
-    bigFont: '',
-    color: 0xffffff
+    bigFont: ''
+  },
+  colorSettings: {
+    byLayerColor: 0xffffff,
+    byBlockColor: 0xffffff,
+    color: new MTextColor(256)
   },
   toolbar: {
     enabled: true,

@@ -1,3 +1,4 @@
+export { DEFAULT_FONT_FAMILY } from './format';
 export { MTextInputBox, MTextEditor, defaultCharFormat, sameFormat } from './viewer';
 export type {
   CharFormat,

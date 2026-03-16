@@ -1,4 +1,4 @@
-export { MTextInputBox, MTextEditor, defaultCharFormat, sameFormat } from './viewer';
+export { DEFAULT_FONT_FAMILY, MTextInputBox, MTextEditor, defaultCharFormat, sameFormat } from './viewer';
 export {
   MTextDocument,
   parseMTextToAst,

@@ -1,4 +1,5 @@
 import {
+  DEFAULT_FONT_FAMILY,
   MTextInputBox,
   parseMTextToAst,
   type MTextToolbarColorPickerFactory,
@@ -7,7 +8,7 @@ import {
 import { diffWordsWithSpace } from 'diff';
 import { ElColorPicker } from 'element-plus';
 import 'element-plus/dist/index.css';
-import { MTextColor } from '@mlightcad/mtext-renderer';
+import { createDefaultColorSettings, MTextColor } from '@mlightcad/mtext-renderer';
 import { getColorByIndex } from '@mlightcad/mtext-renderer';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -227,9 +228,8 @@ const textStyle = {
   obliqueAngle: 0,
   textGenerationFlag: 0,
   lastHeight: 22,
-  font: 'simkai',
-  bigFont: '',
-  color: 0xffffff
+  font: DEFAULT_FONT_FAMILY,
+  bigFont: ''
 };
 
 function createDemoEditor(options: {
@@ -259,10 +259,7 @@ function createDemoEditor(options: {
         offsetY: 12,
         colorPicker: createElementPlusToolbarColorPicker
       },
-      colorSettings: {
-        byBlockColor: 0xFF,
-        byLayerColor: 0xFF,
-      }
+      colorSettings: createDefaultColorSettings()
     })
   };
 }
@@ -636,8 +633,7 @@ function updateStatus(): void {
     `Current ACI: ${state.currentFormat.aci === null ? 'null' : state.currentFormat.aci}`,
     `Current RGB (hex): ${colorNumberToCssHex(state.currentFormat.rgb)}`,
     'Default Text Style:',
-    JSON.stringify(defaultTextStyle, null, 2),
-    `Default Text Style Color (hex): ${colorNumberToCssHex(defaultTextStyle.color)}`
+    JSON.stringify(defaultTextStyle, null, 2)
   ].join('\n');
 }
 
