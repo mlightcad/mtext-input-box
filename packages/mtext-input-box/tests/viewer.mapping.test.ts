@@ -306,7 +306,69 @@ describe('MTextInputBox cursor/document index mapping', () => {
     });
   });
 
-  test('anchors empty-content cursor to first line center from container top', () => {
+  test('normalizes rendered content so position stays at the top-left edge', () => {
+    const proto = MTextInputBox.prototype as unknown as Record<string, (...args: any[]) => any>;
+    const normalizeRenderedTopAlignment = proto.normalizeRenderedTopAlignment as (this: any, obj: any, data: any) => void;
+    const object = {
+      position: new THREE.Vector3(0, 0, 0),
+      updateMatrixWorld: vi.fn()
+    };
+    const context = {
+      mtextInsertionOffset: new THREE.Vector3(0, 0, 0)
+    };
+    const rendered = {
+      containerBox: { x: 0, y: -14, width: 120, height: 24 },
+      charBoxes: [{ x: 0, y: 5, width: 10, height: 10 }],
+      lineLayouts: [{ y: 5, height: 10 }]
+    };
+
+    normalizeRenderedTopAlignment.call(context, object, rendered);
+
+    expect(object.position.y).toBe(-10);
+    expect(object.updateMatrixWorld).toHaveBeenCalledWith(true);
+    expect(context.mtextInsertionOffset.toArray()).toEqual([0, -10, 0]);
+    expect(rendered.containerBox).toEqual({ x: 0, y: -24, width: 120, height: 24 });
+    expect(rendered.charBoxes[0].y).toBe(-5);
+    expect(rendered.lineLayouts[0].y).toBe(-5);
+  });
+
+  test('returns persisted MTEXT insertion point with render alignment offset', () => {
+    const proto = MTextInputBox.prototype as unknown as Record<string, (...args: any[]) => any>;
+    const getMTextInsertionPoint = proto.getMTextInsertionPoint as (this: any) => THREE.Vector3;
+    const context = {
+      position: new THREE.Vector3(10, 20, 2),
+      mtextInsertionOffset: new THREE.Vector3(0, -10, 0)
+    };
+
+    const result = getMTextInsertionPoint.call(context);
+
+    expect(result.toArray()).toEqual([10, 10, 2]);
+    expect(result).not.toBe(context.position);
+  });
+
+  test('fallback layout extends below the top-left insertion point', () => {
+    const proto = MTextInputBox.prototype as unknown as Record<string, (...args: any[]) => any>;
+    const createFallbackCharBoxes = proto.createFallbackCharBoxes as (this: any) => {
+      containerBox: { x: number; y: number; width: number; height: number };
+      charBoxes: Array<{ x: number; y: number; width: number; height: number }>;
+      lineLayouts: Array<{ y: number; height: number }>;
+    };
+    const context = {
+      width: 120,
+      currentFormat: { fontSize: 10 },
+      enableWordWrap: true,
+      getChars: () => ['A'],
+      getFallbackLineAdvance: () => 15
+    };
+
+    const result = createFallbackCharBoxes.call(context);
+
+    expect(result.containerBox).toEqual({ x: 0, y: -15, width: 120, height: 15 });
+    expect(result.lineLayouts).toEqual([{ y: -7.5, height: 15 }]);
+    expect(result.charBoxes[0]).toMatchObject({ y: -7.5, height: 15 });
+  });
+
+  test('anchors empty-content cursor to first line center below container top', () => {
     const proto = MTextInputBox.prototype as unknown as Record<string, (...args: any[]) => any>;
     const getActiveCursorRenderState = proto.getActiveCursorRenderState as (
       this: any,
@@ -318,17 +380,17 @@ describe('MTextInputBox cursor/document index mapping', () => {
       cursorLogic: {
         getCharBoxes: () => [],
         getCurrentIndex: () => 0,
-        getCurrentLineInfo: () => ({ startIndex: 0, endIndex: -1, charCount: 0, y: 220, height: 220 })
+        getCurrentLineInfo: () => ({ startIndex: 0, endIndex: -1, charCount: 0, y: -24, height: 24 })
       },
-      latestCursorLayoutData: { containerBox: { x: 0, y: 200, width: 300, height: 220 }, charBoxes: [] },
-      layoutContainer: { x: 0, y: 200, width: 300, height: 220 },
+      latestCursorLayoutData: { containerBox: { x: 0, y: -24, width: 300, height: 24 }, charBoxes: [] },
+      layoutContainer: { x: 0, y: -24, width: 300, height: 24 },
       getFallbackLineAdvance: () => 24
     };
 
-    const result = getActiveCursorRenderState.call(context, { x: 0, y: 220 }, 220);
+    const result = getActiveCursorRenderState.call(context, { x: 0, y: -24 }, 24);
 
-    expect(result.position).toEqual({ x: 0, y: 212 });
-    expect(result.height).toBeCloseTo(19.2);
+    expect(result.position).toEqual({ x: 0, y: -12 });
+    expect(result.height).toBeCloseTo(24);
   });
 
   test('handleKeyDown closes editor on Escape', () => {

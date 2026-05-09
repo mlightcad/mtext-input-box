@@ -77,6 +77,7 @@ export class MTextInputBox {
 
   private width: number;
   private position: THREE.Vector3;
+  private mtextInsertionOffset = new THREE.Vector3(0, 0, 0);
   private enableWordWrap: boolean;
 
   private mtextString = '';
@@ -322,6 +323,9 @@ export class MTextInputBox {
     });
 
     const cursorStyle: Partial<CursorStyle> = { ...(options.cursorStyle ?? {}) };
+    if (cursorStyle.height === undefined && cursorStyle.heightMode !== 'fixed') {
+      cursorStyle.height = 0;
+    }
     cursorStyle.color ??= '#ffffff';
     cursorStyle.glowColor ??= '#ffffff';
 
@@ -886,12 +890,18 @@ export class MTextInputBox {
 
   /** Returns cursor world position for IME/caret anchoring. */
   public getCursorWorldPosition(): { x: number; y: number; z: number } {
-    const cursor = this.cursorLogic.getCursorState().position;
+    const cursorState = this.cursorLogic.getCursorState();
+    const cursor = this.getActiveCursorRenderState(cursorState.position, cursorState.lineInfo.height).position;
     return {
       x: this.position.x + cursor.x,
       y: this.position.y + cursor.y,
       z: this.position.z
     };
+  }
+
+  /** Returns the MTEXT insertion point that preserves the editor's visual top-left placement. */
+  public getMTextInsertionPoint(): THREE.Vector3 {
+    return this.position.clone().add(this.mtextInsertionOffset);
   }
 
   /** Returns current internal state snapshot. */
@@ -1179,6 +1189,7 @@ export class MTextInputBox {
 
   private relayout(): void {
     if (!this.rendererReady) {
+      this.mtextInsertionOffset.set(0, 0, 0);
       const fallback = this.createFallbackCharBoxes();
       this.layoutContainer = fallback.containerBox;
       this.updateCursorData(fallback.charBoxes, fallback.lineBreakIndices, fallback.lineLayouts);
@@ -1201,12 +1212,14 @@ export class MTextInputBox {
       this.replaceRenderedObject(object);
 
       const rendered = this.extractBoxesFromRenderedObject(object);
+      this.mtextInsertionOffset.set(0, 0, 0);
       this.normalizeRenderedTopAlignment(object, rendered);
       this.layoutContainer = rendered.containerBox;
       this.updateCursorData(rendered.charBoxes, rendered.lineBreakIndices, rendered.lineLayouts);
       this.updateBoundingBoxGeometry();
     } catch (error) {
       console.error('[mtext-input-box] Failed to sync render MTEXT', error);
+      this.mtextInsertionOffset.set(0, 0, 0);
       const fallback = this.createFallbackCharBoxes();
       this.layoutContainer = fallback.containerBox;
       this.updateCursorData(fallback.charBoxes, fallback.lineBreakIndices, fallback.lineLayouts);
@@ -1349,9 +1362,11 @@ export class MTextInputBox {
     object: MTextObject,
     rendered: CursorLayoutData
   ): void {
-    const dy = -rendered.containerBox.y;
+    const topY = rendered.containerBox.y + rendered.containerBox.height;
+    const dy = -topY;
     if (!Number.isFinite(dy) || Math.abs(dy) < 1e-8) return;
 
+    this.mtextInsertionOffset.set(0, dy, 0);
     object.position.y += dy;
     object.updateMatrixWorld(true);
 
@@ -1393,17 +1408,17 @@ export class MTextInputBox {
     const lineLayouts: LineLayoutInput[] = [];
 
     let x = 0;
-    let y = 0;
-    let maxY = lineHeight;
-    lineLayouts.push({ y: y + lineHeight / 2, height: lineHeight });
+    let lineTop = 0;
+    let minY = -lineHeight;
+    lineLayouts.push({ y: lineTop - lineHeight / 2, height: lineHeight });
 
     for (const char of this.getChars()) {
       if (char === '\n') {
         lineBreakIndices.push(charBoxes.length);
         x = 0;
-        y += lineHeight;
-        maxY = Math.max(maxY, y + lineHeight);
-        lineLayouts.push({ y: y + lineHeight / 2, height: lineHeight });
+        lineTop -= lineHeight;
+        minY = Math.min(minY, lineTop - lineHeight);
+        lineLayouts.push({ y: lineTop - lineHeight / 2, height: lineHeight });
         continue;
       }
 
@@ -1411,20 +1426,21 @@ export class MTextInputBox {
       if (this.enableWordWrap && x > 0 && x + width > this.width) {
         lineBreakIndices.push(charBoxes.length);
         x = 0;
-        y += lineHeight;
+        lineTop -= lineHeight;
+        minY = Math.min(minY, lineTop - lineHeight);
+        lineLayouts.push({ y: lineTop - lineHeight / 2, height: lineHeight });
       }
 
-      charBoxes.push({ x, y: y + lineHeight / 2, width, height: lineHeight });
+      charBoxes.push({ x, y: lineTop - lineHeight / 2, width, height: lineHeight });
       x += width;
-      maxY = Math.max(maxY, y + lineHeight);
     }
 
     return {
       containerBox: {
         x: 0,
-        y: 0,
+        y: minY,
         width: this.width,
-        height: Math.max(1, maxY)
+        height: Math.max(1, -minY)
       },
       charBoxes,
       lineBreakIndices,
@@ -1763,7 +1779,7 @@ export class MTextInputBox {
           // Best source: renderer-provided line layout already represents
           // the actual first-line center in editor local coordinates.
           position: { x: fallbackPosition.x, y: firstLine.y },
-          height: Math.max(1, lineHeight * 0.8)
+          height: lineHeight
         };
       }
 
@@ -1772,12 +1788,12 @@ export class MTextInputBox {
         position: {
           x: fallbackPosition.x,
           // When explicit line layout is unavailable, infer first-line center
-          // from top-left container coordinates:
-          //   lineCenterY = containerTopY + lineHeight / 2
+          // from the container's lower edge in y-up coordinates:
+          //   lineCenterY = containerBottomY + lineHeight / 2
           // This keeps caret aligned with the top row for empty MTEXT.
           y: this.layoutContainer.y + inferredLineHeight / 2
         },
-        height: Math.max(1, inferredLineHeight * 0.8)
+        height: inferredLineHeight
       };
     }
 
@@ -1796,7 +1812,7 @@ export class MTextInputBox {
         }
       }
 
-      const emptyLineHeight = (line.height ?? fallbackHeight) * 0.8;
+      const emptyLineHeight = line.height ?? fallbackHeight;
       return {
         position: { x: fallbackPosition.x, y: line.y ?? fallbackPosition.y },
         height: Math.max(1, emptyLineHeight)
