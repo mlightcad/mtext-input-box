@@ -649,6 +649,48 @@ export class MTextInputBox {
     return { ...this.currentFormat };
   }
 
+  /** Toggles selected alphabetic text between upper and lower case. */
+  public toggleCase(): void {
+    const selection = this.getSelectionRange();
+    if (selection.isCollapsed) return;
+
+    this.commitHistoryEdit(() => {
+      this.syncDocumentFromUiState();
+
+      const start = this.toDocumentIndexFromLogicalIndex(selection.start, true);
+      const end = this.toDocumentIndexFromLogicalIndex(selection.end, false);
+      if (end <= start) return;
+
+      const selectedNodes = this.document.ast.nodes.slice(start, end);
+      const selectedText = selectedNodes
+        .map((node) => {
+          if (node.type === 'char') return node.value;
+          if (node.type === 'stack') return `${node.numerator}${node.denominator}`;
+          return '';
+        })
+        .join('');
+      if (!/[a-zA-Z]/.test(selectedText)) return;
+
+      const hasLowercase = /[a-z]/.test(selectedText);
+      const transform = (value: string) => (hasLowercase ? value.toUpperCase() : value.toLowerCase());
+
+      this.document.transaction(() => {
+        for (const node of selectedNodes) {
+          if (node.type === 'char') {
+            node.value = transform(node.value);
+          } else if (node.type === 'stack') {
+            node.numerator = transform(node.numerator);
+            node.denominator = transform(node.denominator);
+          }
+        }
+        this.document.setSelection(start, end);
+      });
+
+      this.syncUiStateFromDocument();
+      this.relayout();
+    });
+  }
+
   /** Returns renderer default text style defined by `textStyle`. */
   public getDefaultTextStyle(): TextStyle {
     return { ...this.defaultTextStyle };
