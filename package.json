@@ -1,7 +1,7 @@
 {
   "name": "mtext-input-box-monorepo",
   "private": true,
-  "packageManager": "pnpm@9.14.2",
+  "packageManager": "pnpm@9.15.9",
   "scripts": {
     "build": "pnpm --filter @mlightcad/text-box-cursor build && pnpm --filter @mlightcad/mtext-input-box build && pnpm --filter @mlightcad/demo-canvas-cursor build && pnpm --filter @mlightcad/demo-three-cursor build && pnpm --filter @mlightcad/demo-mtext-input-box build",
     "dev:canvas": "pnpm --filter @mlightcad/demo-canvas-cursor dev",

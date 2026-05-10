@@ -5,7 +5,7 @@ default:
   image: node:22.12.0
   before_script:
     - corepack enable
-    - corepack prepare pnpm@9.14.2 --activate
+    - corepack prepare pnpm@9.15.9 --activate
     - pnpm config set store-dir .pnpm-store
     - pnpm install --frozen-lockfile
   cache:
