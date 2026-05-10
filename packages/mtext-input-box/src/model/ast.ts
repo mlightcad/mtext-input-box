@@ -119,9 +119,15 @@ export function buildMTextFromAst(ast: MTextAst): string {
 }
 
 /** Insert plain text at a character position. */
-export function insertTextInAst(ast: MTextAst, index: number, text: string, style?: MTextStyle): MTextAst {
+export function insertTextInAst(
+  ast: MTextAst,
+  index: number,
+  text: string,
+  style?: MTextStyle
+): MTextAst {
   const safeIndex = clamp(index, 0, ast.nodes.length);
-  const insertStyle = style ?? inferInsertStyle(ast, safeIndex) ?? contextToStyle(new MTextContext());
+  const insertStyle =
+    style ?? inferInsertStyle(ast, safeIndex) ?? contextToStyle(new MTextContext());
   const newNodes = textToAstNodes(text, insertStyle);
 
   ast.nodes.splice(safeIndex, 0, ...newNodes);
@@ -147,7 +153,8 @@ export function replaceRangeInAst(
 ): MTextAst {
   const safeStart = clamp(start, 0, ast.nodes.length);
   const safeCount = clamp(count, 0, ast.nodes.length - safeStart);
-  const insertStyle = style ?? inferInsertStyle(ast, safeStart) ?? contextToStyle(new MTextContext());
+  const insertStyle =
+    style ?? inferInsertStyle(ast, safeStart) ?? contextToStyle(new MTextContext());
   const newNodes = textToAstNodes(text, insertStyle);
 
   ast.nodes.splice(safeStart, safeCount, ...newNodes);

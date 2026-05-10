@@ -85,13 +85,14 @@ export function cloneStyle(style: MTextStyle): MTextStyle {
   };
 }
 
-export function hasNodeStyle(node: MTextAstNode): node is (
+export function hasNodeStyle(
+  node: MTextAstNode
+): node is
   | MTextAstCharNode
   | MTextAstStackNode
   | MTextAstParagraphBreakNode
   | MTextAstColumnBreakNode
-  | MTextAstWrapAtDimLineNode
-) {
+  | MTextAstWrapAtDimLineNode {
   return (
     node.type === 'char' ||
     node.type === 'stack' ||
@@ -141,13 +142,17 @@ export function serializeStyleDelta(prev: MTextStyle | null, next: MTextStyle): 
 
   if (from.underline !== nextWithScript.underline) out += nextWithScript.underline ? '\\L' : '\\l';
   if (from.overline !== nextWithScript.overline) out += nextWithScript.overline ? '\\O' : '\\o';
-  if (from.strikeThrough !== nextWithScript.strikeThrough) out += nextWithScript.strikeThrough ? '\\K' : '\\k';
+  if (from.strikeThrough !== nextWithScript.strikeThrough)
+    out += nextWithScript.strikeThrough ? '\\K' : '\\k';
 
   if (from.align !== nextWithScript.align) {
     out += `\\A${nextWithScript.align};`;
   }
 
-  if (from.aci !== nextWithScript.aci || JSON.stringify(from.rgb) !== JSON.stringify(nextWithScript.rgb)) {
+  if (
+    from.aci !== nextWithScript.aci ||
+    JSON.stringify(from.rgb) !== JSON.stringify(nextWithScript.rgb)
+  ) {
     if (nextWithScript.rgb) {
       out += `\\c${rgb2int(nextWithScript.rgb)};`;
     } else {

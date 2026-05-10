@@ -22,8 +22,7 @@ body {
   color: var(--text);
   background:
     radial-gradient(circle at 10% 10%, #253d6f 0%, transparent 42%),
-    radial-gradient(circle at 88% 20%, #1f355b 0%, transparent 38%),
-    var(--bg);
+    radial-gradient(circle at 88% 20%, #1f355b 0%, transparent 38%), var(--bg);
 }
 
 .app-shell {
@@ -88,7 +87,9 @@ canvas {
   background: #101828;
   color: var(--text);
   font-size: 12px;
-  transition: border-color 0.2s ease, background-color 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .control-check:hover {
@@ -106,7 +107,9 @@ button {
   border: 1px solid var(--line);
   border-radius: 8px;
   cursor: pointer;
-  transition: border-color 0.2s ease, background-color 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
 }
 
 button:hover {
@@ -227,7 +230,12 @@ button:hover {
   background: #0d1322;
   color: #d2daf8;
   padding: 8px;
-  font: 12px/1.45 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+  font:
+    12px/1.45 'JetBrains Mono',
+    'SF Mono',
+    Menlo,
+    Consolas,
+    monospace;
   white-space: pre-wrap;
 }
 
@@ -240,7 +248,6 @@ button:hover {
     grid-template-columns: 1fr;
   }
 }
-
 
 .diff-view {
   white-space: pre-wrap;

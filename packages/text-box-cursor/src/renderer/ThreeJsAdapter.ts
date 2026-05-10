@@ -174,8 +174,14 @@ export class ThreeJsRendererAdapter implements I3DRenderer {
     const parsed = parseColor(options.color);
     ctx.fillStyle = `rgba(${Math.round(parsed.color.r * 255)}, ${Math.round(parsed.color.g * 255)}, ${Math.round(parsed.color.b * 255)}, ${options.opacity ?? parsed.alpha})`;
 
-    const drawX = align === 'center' ? canvas.width / 2 : align === 'right' ? canvas.width - padding : padding;
-    const drawY = baseline === 'middle' ? canvas.height / 2 : baseline === 'bottom' ? canvas.height - padding : padding;
+    const drawX =
+      align === 'center' ? canvas.width / 2 : align === 'right' ? canvas.width - padding : padding;
+    const drawY =
+      baseline === 'middle'
+        ? canvas.height / 2
+        : baseline === 'bottom'
+          ? canvas.height - padding
+          : padding;
     ctx.fillText(options.text, drawX, drawY);
 
     const isYUp = this.isYAxisUp();
@@ -201,11 +207,16 @@ export class ThreeJsRendererAdapter implements I3DRenderer {
 
     const pos = this.transformPoint(options.x, options.y);
     const anchorX = align === 'center' ? 0 : align === 'right' ? -worldW / 2 : worldW / 2;
-    const anchorY = baseline === 'middle'
-      ? 0
-      : baseline === 'bottom'
-        ? isYUp ? worldH / 2 : -worldH / 2
-        : isYUp ? -worldH / 2 : worldH / 2;
+    const anchorY =
+      baseline === 'middle'
+        ? 0
+        : baseline === 'bottom'
+          ? isYUp
+            ? worldH / 2
+            : -worldH / 2
+          : isYUp
+            ? -worldH / 2
+            : worldH / 2;
     mesh.position.set(pos.x + anchorX, pos.y + anchorY, 0.2);
     mesh.renderOrder = 10;
     this.frameGroup.add(mesh);

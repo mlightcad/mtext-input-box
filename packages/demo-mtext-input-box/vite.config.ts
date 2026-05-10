@@ -15,26 +15,26 @@ export default defineConfig(({ command }) => {
   }
 
   return {
-  base: './',
-  server: {
-    port: 5175,
-    fs: {
-      allow: [path.resolve(__dirname, '..')]
-    }
-  },
-  ...(aliases.length > 0 ? { resolve: { alias: aliases } } : {}),
-  optimizeDeps: {
-    exclude: ['@mlightcad/mtext-input-box', '@mlightcad/text-box-cursor']
-  },
-  plugins: [
-    viteStaticCopy({
-      targets: [
-        {
-          src: './node_modules/@mlightcad/mtext-renderer/dist/mtext-renderer-worker.js',
-          dest: 'assets'
-        }
-      ]
-    })
-  ]
+    base: './',
+    server: {
+      port: 5175,
+      fs: {
+        allow: [path.resolve(__dirname, '..')]
+      }
+    },
+    ...(aliases.length > 0 ? { resolve: { alias: aliases } } : {}),
+    optimizeDeps: {
+      exclude: ['@mlightcad/mtext-input-box', '@mlightcad/text-box-cursor']
+    },
+    plugins: [
+      viteStaticCopy({
+        targets: [
+          {
+            src: './node_modules/@mlightcad/mtext-renderer/dist/mtext-renderer-worker.js',
+            dest: 'assets'
+          }
+        ]
+      })
+    ]
   };
 });

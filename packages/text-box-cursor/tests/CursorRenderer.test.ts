@@ -75,7 +75,11 @@ describe('CursorRenderer', () => {
 
   test('debug rendering draws debug primitives', () => {
     const mock = new MockRenderer();
-    const renderer = new CursorRenderer({ renderer: mock, enableSelection: false, enableDebug: true });
+    const renderer = new CursorRenderer({
+      renderer: mock,
+      enableSelection: false,
+      enableDebug: true
+    });
 
     renderer.updateDebugInfo({
       containerBox: { x: 0, y: 0, width: 100, height: 60 },
@@ -94,7 +98,11 @@ describe('CursorRenderer', () => {
 
   test('merged selection strategy reduces quad count for contiguous boxes', () => {
     const mock = new MockRenderer();
-    const renderer = new CursorRenderer({ renderer: mock, enableSelection: true, enableDebug: false });
+    const renderer = new CursorRenderer({
+      renderer: mock,
+      enableSelection: true,
+      enableDebug: false
+    });
     renderer.setSelectionStyle({ strategy: 'merged' });
 
     renderer.updateSelection([

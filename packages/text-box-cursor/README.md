@@ -97,7 +97,7 @@ const charBoxes: Box[] = [
   { x: 10, y: 50, width: 10, height: 20 }, // C
   { x: 22, y: 50, width: 10, height: 20 }, // D
   { x: 10, y: 80, width: 10, height: 20 }, // E
-  { x: 22, y: 80, width: 10, height: 20 }  // F
+  { x: 22, y: 80, width: 10, height: 20 } // F
 ];
 
 // Breaks after B (index 2) and after D (index 4).
@@ -127,7 +127,7 @@ const cursor = new TextBoxCursor({
   lineLayouts: [
     { y: 20, height: 20 }, // line 1
     { y: 50, height: 20 }, // empty line
-    { y: 80, height: 20 }  // line 3
+    { y: 80, height: 20 } // line 3
   ]
 });
 ```

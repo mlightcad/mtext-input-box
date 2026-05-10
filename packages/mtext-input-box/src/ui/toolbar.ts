@@ -423,7 +423,9 @@ export class MTextToolbar {
   }
 
   private ensureSelectValue(fontFamily: string): void {
-    const existing = Array.from(this.controls.fontFamily.options).some((item) => item.value === fontFamily);
+    const existing = Array.from(this.controls.fontFamily.options).some(
+      (item) => item.value === fontFamily
+    );
     if (!existing) {
       const option = document.createElement('option');
       option.value = fontFamily;
@@ -461,7 +463,9 @@ export class MTextToolbar {
       this.onFormatChange({ italic: !this.controls.italicBtn.classList.contains('is-active') });
     });
     this.controls.underlineBtn.addEventListener('click', () => {
-      this.onFormatChange({ underline: !this.controls.underlineBtn.classList.contains('is-active') });
+      this.onFormatChange({
+        underline: !this.controls.underlineBtn.classList.contains('is-active')
+      });
     });
     this.controls.overlineBtn.addEventListener('click', () => {
       this.onFormatChange({ overline: !this.controls.overlineBtn.classList.contains('is-active') });
@@ -487,7 +491,8 @@ export class MTextToolbar {
       const target = event.target as HTMLElement | null;
       if (!target) return;
       if (target.closest('[data-ml-mtext-toolbar-interactive="true"]')) return;
-      if (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'OPTION') return;
+      if (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'OPTION')
+        return;
       event.preventDefault();
       this.anchorElement.focus({ preventScroll: true });
     });
@@ -520,7 +525,9 @@ export class MTextToolbar {
     host.className = 'ml-mtext-toolbar__color';
     host.dataset.mlMtextToolbarInteractive = 'true';
 
-    const initialColor = initialFormat ? formatToMTextColor(initialFormat) : hexToMTextColor('#ffffff');
+    const initialColor = initialFormat
+      ? formatToMTextColor(initialFormat)
+      : hexToMTextColor('#ffffff');
     const instance = factory({
       container: host,
       theme: this.theme,
@@ -565,4 +572,3 @@ export class MTextToolbar {
     });
   }
 }
-

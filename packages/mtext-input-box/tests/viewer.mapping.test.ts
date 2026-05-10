@@ -308,7 +308,11 @@ describe('MTextInputBox cursor/document index mapping', () => {
 
   test('normalizes rendered content so position stays at the top-left edge', () => {
     const proto = MTextInputBox.prototype as unknown as Record<string, (...args: any[]) => any>;
-    const normalizeRenderedTopAlignment = proto.normalizeRenderedTopAlignment as (this: any, obj: any, data: any) => void;
+    const normalizeRenderedTopAlignment = proto.normalizeRenderedTopAlignment as (
+      this: any,
+      obj: any,
+      data: any
+    ) => void;
     const object = {
       position: new THREE.Vector3(0, 0, 0),
       updateMatrixWorld: vi.fn()
@@ -380,9 +384,18 @@ describe('MTextInputBox cursor/document index mapping', () => {
       cursorLogic: {
         getCharBoxes: () => [],
         getCurrentIndex: () => 0,
-        getCurrentLineInfo: () => ({ startIndex: 0, endIndex: -1, charCount: 0, y: -24, height: 24 })
+        getCurrentLineInfo: () => ({
+          startIndex: 0,
+          endIndex: -1,
+          charCount: 0,
+          y: -24,
+          height: 24
+        })
       },
-      latestCursorLayoutData: { containerBox: { x: 0, y: -24, width: 300, height: 24 }, charBoxes: [] },
+      latestCursorLayoutData: {
+        containerBox: { x: 0, y: -24, width: 300, height: 24 },
+        charBoxes: []
+      },
       layoutContainer: { x: 0, y: -24, width: 300, height: 24 },
       getFallbackLineAdvance: () => 24
     };
