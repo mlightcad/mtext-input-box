@@ -941,9 +941,9 @@ export class MTextInputBox {
     };
   }
 
-  /** Returns the MTEXT insertion point that preserves the editor's visual top-left placement. */
+  /** Returns the MTEXT insertion point supplied when the editor was opened. */
   public getMTextInsertionPoint(): THREE.Vector3 {
-    return this.position.clone().add(this.mtextInsertionOffset);
+    return this.position.clone();
   }
 
   /** Returns current internal state snapshot. */

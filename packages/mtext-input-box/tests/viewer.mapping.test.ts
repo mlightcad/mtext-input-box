@@ -332,7 +332,7 @@ describe('MTextInputBox cursor/document index mapping', () => {
     expect(rendered.lineLayouts[0].y).toBe(-5);
   });
 
-  test('returns persisted MTEXT insertion point with render alignment offset', () => {
+  test('returns the original MTEXT insertion point without render alignment offset', () => {
     const proto = MTextInputBox.prototype as unknown as Record<string, (...args: any[]) => any>;
     const getMTextInsertionPoint = proto.getMTextInsertionPoint as (this: any) => THREE.Vector3;
     const context = {
@@ -342,7 +342,7 @@ describe('MTextInputBox cursor/document index mapping', () => {
 
     const result = getMTextInsertionPoint.call(context);
 
-    expect(result.toArray()).toEqual([10, 10, 2]);
+    expect(result.toArray()).toEqual([10, 20, 2]);
     expect(result).not.toBe(context.position);
   });
 
