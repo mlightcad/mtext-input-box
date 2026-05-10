@@ -17,7 +17,9 @@ export class MTextDocument {
 
   constructor(astOrMText: MTextAst | string = { nodes: [] }) {
     this._ast =
-      typeof astOrMText === 'string' ? parseMTextToAst(astOrMText) : MTextDocument.cloneAst(astOrMText);
+      typeof astOrMText === 'string'
+        ? parseMTextToAst(astOrMText)
+        : MTextDocument.cloneAst(astOrMText);
     this._cursor = this._ast.nodes.length;
   }
 

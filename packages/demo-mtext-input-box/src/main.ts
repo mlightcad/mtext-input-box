@@ -128,14 +128,38 @@ function buildInlineDiffHtml(previousText: string, currentText: string): string 
 const canvas = requireNode(document.querySelector<HTMLCanvasElement>('#stage'), '#stage');
 const canvasWrap = requireNode(document.querySelector<HTMLElement>('.canvas-wrap'), '.canvas-wrap');
 const status = requireNode(document.querySelector<HTMLElement>('#status'), '#status');
-const drawBoxBtn = requireNode(document.querySelector<HTMLButtonElement>('#drawBoxBtn'), '#drawBoxBtn');
-const toggleThemeBtn = requireNode(document.querySelector<HTMLButtonElement>('#toggleThemeBtn'), '#toggleThemeBtn');
-const interactionHint = requireNode(document.querySelector<HTMLElement>('#interactionHint'), '#interactionHint');
-const debugEnabled = requireNode(document.querySelector<HTMLInputElement>('#debugEnabled'), '#debugEnabled');
-const debugShowBoxes = requireNode(document.querySelector<HTMLInputElement>('#debugShowBoxes'), '#debugShowBoxes');
-const debugShowChars = requireNode(document.querySelector<HTMLInputElement>('#debugShowChars'), '#debugShowChars');
-const debugShowCharIndices = requireNode(document.querySelector<HTMLInputElement>('#debugShowCharIndices'), '#debugShowCharIndices');
-const debugShowLineIndices = requireNode(document.querySelector<HTMLInputElement>('#debugShowLineIndices'), '#debugShowLineIndices');
+const drawBoxBtn = requireNode(
+  document.querySelector<HTMLButtonElement>('#drawBoxBtn'),
+  '#drawBoxBtn'
+);
+const toggleThemeBtn = requireNode(
+  document.querySelector<HTMLButtonElement>('#toggleThemeBtn'),
+  '#toggleThemeBtn'
+);
+const interactionHint = requireNode(
+  document.querySelector<HTMLElement>('#interactionHint'),
+  '#interactionHint'
+);
+const debugEnabled = requireNode(
+  document.querySelector<HTMLInputElement>('#debugEnabled'),
+  '#debugEnabled'
+);
+const debugShowBoxes = requireNode(
+  document.querySelector<HTMLInputElement>('#debugShowBoxes'),
+  '#debugShowBoxes'
+);
+const debugShowChars = requireNode(
+  document.querySelector<HTMLInputElement>('#debugShowChars'),
+  '#debugShowChars'
+);
+const debugShowCharIndices = requireNode(
+  document.querySelector<HTMLInputElement>('#debugShowCharIndices'),
+  '#debugShowCharIndices'
+);
+const debugShowLineIndices = requireNode(
+  document.querySelector<HTMLInputElement>('#debugShowLineIndices'),
+  '#debugShowLineIndices'
+);
 const tabInfo = requireNode(document.querySelector<HTMLButtonElement>('#tabInfo'), '#tabInfo');
 const tabAst = requireNode(document.querySelector<HTMLButtonElement>('#tabAst'), '#tabAst');
 const tabCursorLayout = requireNode(
@@ -143,7 +167,10 @@ const tabCursorLayout = requireNode(
   '#tabCursorLayout'
 );
 const tabRaw = requireNode(document.querySelector<HTMLButtonElement>('#tabRaw'), '#tabRaw');
-const tabPaneInfo = requireNode(document.querySelector<HTMLElement>('#tabPaneInfo'), '#tabPaneInfo');
+const tabPaneInfo = requireNode(
+  document.querySelector<HTMLElement>('#tabPaneInfo'),
+  '#tabPaneInfo'
+);
 const tabPaneAst = requireNode(document.querySelector<HTMLElement>('#tabPaneAst'), '#tabPaneAst');
 const tabPaneCursorLayout = requireNode(
   document.querySelector<HTMLElement>('#tabPaneCursorLayout'),
@@ -152,7 +179,10 @@ const tabPaneCursorLayout = requireNode(
 const tabPaneRaw = requireNode(document.querySelector<HTMLElement>('#tabPaneRaw'), '#tabPaneRaw');
 const rawMText = requireNode(document.querySelector<HTMLTextAreaElement>('#rawMText'), '#rawMText');
 const mtextDiff = requireNode(document.querySelector<HTMLElement>('#mtextDiff'), '#mtextDiff');
-const astEditorContainer = requireNode(document.querySelector<HTMLElement>('#astEditor'), '#astEditor');
+const astEditorContainer = requireNode(
+  document.querySelector<HTMLElement>('#astEditor'),
+  '#astEditor'
+);
 const cursorLayoutEditorContainer = requireNode(
   document.querySelector<HTMLElement>('#cursorLayoutEditor'),
   '#cursorLayoutEditor'
@@ -384,7 +414,10 @@ function updateRawDiffView(): void {
 
   const currentMText = active.editor.getText();
   rawMText.value = currentMText;
-  mtextDiff.innerHTML = buildInlineDiffHtml(previousMTextByEditor[activeEditorIndex] ?? '', currentMText);
+  mtextDiff.innerHTML = buildInlineDiffHtml(
+    previousMTextByEditor[activeEditorIndex] ?? '',
+    currentMText
+  );
   previousMTextByEditor[activeEditorIndex] = currentMText;
 }
 
@@ -404,7 +437,13 @@ toggleThemeBtn.addEventListener('click', () => {
   active.editor.setToolbarTheme(active.editor.getToolbarTheme() === 'dark' ? 'light' : 'dark');
 });
 
-for (const input of [debugEnabled, debugShowBoxes, debugShowChars, debugShowCharIndices, debugShowLineIndices]) {
+for (const input of [
+  debugEnabled,
+  debugShowBoxes,
+  debugShowChars,
+  debugShowCharIndices,
+  debugShowLineIndices
+]) {
   input.addEventListener('change', applyDebugControls);
 }
 
@@ -466,10 +505,7 @@ function cancelDrawBoxInteraction(): void {
   controls.enabled = true;
 }
 
-function createDynamicEditorByWorldBox(
-  worldStart: THREE.Vector3,
-  worldEnd: THREE.Vector3
-): void {
+function createDynamicEditorByWorldBox(worldStart: THREE.Vector3, worldEnd: THREE.Vector3): void {
   const minX = Math.min(worldStart.x, worldEnd.x);
   const maxY = Math.max(worldStart.y, worldEnd.y);
   const width = Math.max(Math.abs(worldEnd.x - worldStart.x), 20);
@@ -515,7 +551,11 @@ canvas.addEventListener('mousedown', (event) => {
     drawRectElement.className = 'draw-rect';
     canvasWrap.appendChild(drawRectElement);
   }
-  updateDrawRect(drawRectElement, toCanvasLocalPoint(drawStartClient.x, drawStartClient.y), toCanvasLocalPoint(drawCurrentClient.x, drawCurrentClient.y));
+  updateDrawRect(
+    drawRectElement,
+    toCanvasLocalPoint(drawStartClient.x, drawStartClient.y),
+    toCanvasLocalPoint(drawCurrentClient.x, drawCurrentClient.y)
+  );
 });
 
 canvas.addEventListener('mousemove', (event) => {

@@ -14,17 +14,32 @@ function requireNode<T>(node: T | null, selector: string): T {
 
 const canvas = requireNode(document.querySelector<HTMLCanvasElement>('#stage'), '#stage');
 const status = requireNode(document.querySelector<HTMLElement>('#status'), '#status');
-const sceneSelect = requireNode(document.querySelector<HTMLSelectElement>('#sceneSelect'), '#sceneSelect');
+const sceneSelect = requireNode(
+  document.querySelector<HTMLSelectElement>('#sceneSelect'),
+  '#sceneSelect'
+);
 const tolerance = requireNode(document.querySelector<HTMLInputElement>('#tolerance'), '#tolerance');
-const toleranceValue = requireNode(document.querySelector<HTMLElement>('#toleranceValue'), '#toleranceValue');
-const zoomInBtn = requireNode(document.querySelector<HTMLButtonElement>('#zoomInBtn'), '#zoomInBtn');
-const zoomOutBtn = requireNode(document.querySelector<HTMLButtonElement>('#zoomOutBtn'), '#zoomOutBtn');
+const toleranceValue = requireNode(
+  document.querySelector<HTMLElement>('#toleranceValue'),
+  '#toleranceValue'
+);
+const zoomInBtn = requireNode(
+  document.querySelector<HTMLButtonElement>('#zoomInBtn'),
+  '#zoomInBtn'
+);
+const zoomOutBtn = requireNode(
+  document.querySelector<HTMLButtonElement>('#zoomOutBtn'),
+  '#zoomOutBtn'
+);
 const zoomResetBtn = requireNode(
   document.querySelector<HTMLButtonElement>('#zoomResetBtn'),
   '#zoomResetBtn'
 );
 const zoomValue = requireNode(document.querySelector<HTMLElement>('#zoomValue'), '#zoomValue');
-const dragToggle = requireNode(document.querySelector<HTMLInputElement>('#dragToggle'), '#dragToggle');
+const dragToggle = requireNode(
+  document.querySelector<HTMLInputElement>('#dragToggle'),
+  '#dragToggle'
+);
 const leftBtn = requireNode(document.querySelector<HTMLButtonElement>('#leftBtn'), '#leftBtn');
 const rightBtn = requireNode(document.querySelector<HTMLButtonElement>('#rightBtn'), '#rightBtn');
 const upBtn = requireNode(document.querySelector<HTMLButtonElement>('#upBtn'), '#upBtn');
@@ -178,7 +193,10 @@ function disposeTextGroup(): void {
   }
 }
 
-function createCharMesh(char: string, box: { x: number; y: number; width: number; height: number }): THREE.Mesh {
+function createCharMesh(
+  char: string,
+  box: { x: number; y: number; width: number; height: number }
+): THREE.Mesh {
   const scale = 3;
   const canvasEl = document.createElement('canvas');
   const width = Math.max(32, Math.ceil(box.width * scale));
@@ -254,7 +272,12 @@ function render(): void {
   const selection = runtime.cursor.getSelection();
 
   runtime.cursorRenderer.setDebugMode(runtime.debugOn);
-  runtime.cursorRenderer.setViewTransform({ x: 0, y: 0, scaleX: runtime.zoom, scaleY: runtime.zoom });
+  runtime.cursorRenderer.setViewTransform({
+    x: 0,
+    y: 0,
+    scaleX: runtime.zoom,
+    scaleY: runtime.zoom
+  });
   runtime.cursorRenderer.setSelectionStyle({
     fillColor: runtime.dragSelecting
       ? 'rgba(0,200,255,0.25)'

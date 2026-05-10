@@ -178,7 +178,7 @@ export interface TextBoxCursorOptions {
    * - `[2]` => lines: `[0..1]`, `[2..3]`
    * - `[2, 2]` => lines: `[0..1]`, `empty`, `[2..3]`
    * - `[0, 2, 4]` => lines: `empty`, `[0..1]`, `[2..3]`, `empty`
-  */
+   */
   lineBreakIndices?: number[];
   /**
    * Optional line layout metadata in visual line order.

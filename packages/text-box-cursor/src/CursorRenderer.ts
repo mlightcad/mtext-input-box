@@ -66,7 +66,10 @@ export class CursorRenderer {
   private readonly debugYAxisUp: boolean;
   private visible = true;
 
-  private cursorState: { position: { x: number; y: number; z?: number }; lineHeight: number } | null = null;
+  private cursorState: {
+    position: { x: number; y: number; z?: number };
+    lineHeight: number;
+  } | null = null;
   private selectionBoxes: Box[] = [];
   private debugData: DebugData | null = null;
   private viewTransform: Transform = { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 };
@@ -164,7 +167,8 @@ export class CursorRenderer {
     });
 
     if (this.enableDebug && this.debugData) this.drawDebug(this.debugData);
-    if (this.enableSelection && this.selectionBoxes.length > 0) this.drawSelection(this.selectionBoxes);
+    if (this.enableSelection && this.selectionBoxes.length > 0)
+      this.drawSelection(this.selectionBoxes);
     if (this.cursorState) this.drawCursor(this.cursorState.position, this.cursorState.lineHeight);
 
     this.renderer.resetTransform();
@@ -181,7 +185,8 @@ export class CursorRenderer {
 
   private drawCursor(position: { x: number; y: number }, lineHeight: number): void {
     const blinkPeriodMs = Math.max(0.2, this.cursorStyle.blinkSpeed) * 1000;
-    const blinkOn = !this.cursorStyle.blinkEnabled || Date.now() % blinkPeriodMs < blinkPeriodMs / 2;
+    const blinkOn =
+      !this.cursorStyle.blinkEnabled || Date.now() % blinkPeriodMs < blinkPeriodMs / 2;
     if (!blinkOn) return;
 
     const height =
@@ -306,7 +311,9 @@ export class CursorRenderer {
     data.charBoxes.forEach((box, index) => {
       const charTop = this.debugYAxisUp ? box.y + box.height / 2 : box.y - box.height / 2;
       const firstLabelOffset = this.debugYAxisUp ? -2 : 2;
-      const secondLabelOffset = this.debugYAxisUp ? -Math.max(8, box.height * 0.2) : Math.max(8, box.height * 0.2);
+      const secondLabelOffset = this.debugYAxisUp
+        ? -Math.max(8, box.height * 0.2)
+        : Math.max(8, box.height * 0.2);
 
       if (this.debugVisibility.showCharBoxes) {
         this.renderer.drawQuad({

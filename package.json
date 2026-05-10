@@ -7,12 +7,15 @@
     "dev:canvas": "pnpm --filter @mlightcad/demo-canvas-cursor dev",
     "dev:mtext": "pnpm --filter @mlightcad/demo-mtext-input-box dev",
     "dev:three": "pnpm --filter @mlightcad/demo-three-cursor dev",
+    "format": "prettier --write .",
     "lint": "pnpm -r --if-present run lint",
+    "lint:fix": "pnpm -r --if-present run lint:fix",
     "publish:mtext": "pnpm run build && pnpm --filter @mlightcad/text-box-cursor publish --access public --no-git-checks && pnpm --filter @mlightcad/mtext-input-box publish --access public --no-git-checks",
     "release": "node tools/release.mjs",
     "test": "pnpm -r --if-present run test"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.30.0"
+    "@changesets/cli": "^2.30.0",
+    "prettier": "^3.8.3"
   }
 }

@@ -147,7 +147,7 @@ toolbar: {
         app.unmount();
       }
     };
-  }
+  };
 }
 ```
 

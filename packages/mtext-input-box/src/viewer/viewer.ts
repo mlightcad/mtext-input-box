@@ -288,19 +288,27 @@ export class MTextInputBox {
         ? textStyle.fixedTextHeight
         : MTextInputBox.DEFAULT_TEXT_STYLE.fixedTextHeight
     );
-    const lastHeight = Math.max(1, Number.isFinite(textStyle.lastHeight) ? textStyle.lastHeight : fixedTextHeight);
+    const lastHeight = Math.max(
+      1,
+      Number.isFinite(textStyle.lastHeight) ? textStyle.lastHeight : fixedTextHeight
+    );
     this.defaultTextStyle = {
       ...textStyle,
       fixedTextHeight,
       lastHeight,
       widthFactor: Number.isFinite(textStyle.widthFactor) ? textStyle.widthFactor : 1,
       obliqueAngle: Number.isFinite(textStyle.obliqueAngle) ? textStyle.obliqueAngle : 0,
-      textGenerationFlag: Number.isFinite(textStyle.textGenerationFlag) ? textStyle.textGenerationFlag : 0,
+      textGenerationFlag: Number.isFinite(textStyle.textGenerationFlag)
+        ? textStyle.textGenerationFlag
+        : 0,
       standardFlag: Number.isFinite(textStyle.standardFlag) ? textStyle.standardFlag : 0,
       font: textStyle.font || MTextInputBox.DEFAULT_TEXT_STYLE.font,
       bigFont: textStyle.bigFont ?? ''
     };
-    this.baseFormat = this.createBaseFormatFromTextStyle(this.defaultTextStyle, this.resolveRenderColorSettings());
+    this.baseFormat = this.createBaseFormatFromTextStyle(
+      this.defaultTextStyle,
+      this.resolveRenderColorSettings()
+    );
     this.currentFormat = { ...this.baseFormat };
 
     this.document = new MTextDocument();
@@ -310,7 +318,7 @@ export class MTextInputBox {
       workerUrl:
         typeof options.workerUrl === 'string'
           ? options.workerUrl
-          : options.workerUrl?.toString() ?? './assets/mtext-renderer-worker.js'
+          : (options.workerUrl?.toString() ?? './assets/mtext-renderer-worker.js')
     });
     if (options.fontUrl) {
       this.mtextRenderer.setFontUrl(options.fontUrl);
@@ -336,10 +344,17 @@ export class MTextInputBox {
       enableDebug: false,
       enableSelection: true,
       debugYAxisUp:
-        this.camera instanceof THREE.OrthographicCamera ? this.camera.top >= this.camera.bottom : true,
+        this.camera instanceof THREE.OrthographicCamera
+          ? this.camera.top >= this.camera.bottom
+          : true,
       debugVisibility: this.debugVisibility
     });
-    this.cursorRenderer.setViewTransform({ x: this.position.x, y: this.position.y, scaleX: 1, scaleY: 1 });
+    this.cursorRenderer.setViewTransform({
+      x: this.position.x,
+      y: this.position.y,
+      scaleX: 1,
+      scaleY: 1
+    });
     this.createBoundingBox(options.showBoundingBox ?? true, options.boundingBoxStyle);
 
     this.setText(options.initialText ?? '');
@@ -649,6 +664,49 @@ export class MTextInputBox {
     return { ...this.currentFormat };
   }
 
+  /** Toggles selected alphabetic text between upper and lower case. */
+  public toggleCase(): void {
+    const selection = this.getSelectionRange();
+    if (selection.isCollapsed) return;
+
+    this.commitHistoryEdit(() => {
+      this.syncDocumentFromUiState();
+
+      const start = this.toDocumentIndexFromLogicalIndex(selection.start, true);
+      const end = this.toDocumentIndexFromLogicalIndex(selection.end, false);
+      if (end <= start) return;
+
+      const selectedNodes = this.document.ast.nodes.slice(start, end);
+      const selectedText = selectedNodes
+        .map((node) => {
+          if (node.type === 'char') return node.value;
+          if (node.type === 'stack') return `${node.numerator}${node.denominator}`;
+          return '';
+        })
+        .join('');
+      if (!/[a-zA-Z]/.test(selectedText)) return;
+
+      const hasLowercase = /[a-z]/.test(selectedText);
+      const transform = (value: string) =>
+        hasLowercase ? value.toUpperCase() : value.toLowerCase();
+
+      this.document.transaction(() => {
+        for (const node of selectedNodes) {
+          if (node.type === 'char') {
+            node.value = transform(node.value);
+          } else if (node.type === 'stack') {
+            node.numerator = transform(node.numerator);
+            node.denominator = transform(node.denominator);
+          }
+        }
+        this.document.setSelection(start, end);
+      });
+
+      this.syncUiStateFromDocument();
+      this.relayout();
+    });
+  }
+
   /** Returns renderer default text style defined by `textStyle`. */
   public getDefaultTextStyle(): TextStyle {
     return { ...this.defaultTextStyle };
@@ -779,7 +837,10 @@ export class MTextInputBox {
   public update(): void {
     const cursorState = this.cursorLogic.getCursorState();
     const selection = this.cursorLogic.getSelection();
-    const cursorRenderState = this.getActiveCursorRenderState(cursorState.position, cursorState.lineInfo.height);
+    const cursorRenderState = this.getActiveCursorRenderState(
+      cursorState.position,
+      cursorState.lineInfo.height
+    );
 
     const selectedBoxes = this.cursorLogic.getSelectedCharBoxes();
     this.cursorRenderer.updateCursor(cursorRenderState.position, cursorRenderState.height);
@@ -891,7 +952,10 @@ export class MTextInputBox {
   /** Returns cursor world position for IME/caret anchoring. */
   public getCursorWorldPosition(): { x: number; y: number; z: number } {
     const cursorState = this.cursorLogic.getCursorState();
-    const cursor = this.getActiveCursorRenderState(cursorState.position, cursorState.lineInfo.height).position;
+    const cursor = this.getActiveCursorRenderState(
+      cursorState.position,
+      cursorState.lineInfo.height
+    ).position;
     return {
       x: this.position.x + cursor.x,
       y: this.position.y + cursor.y,
@@ -899,9 +963,9 @@ export class MTextInputBox {
     };
   }
 
-  /** Returns the MTEXT insertion point that preserves the editor's visual top-left placement. */
+  /** Returns the MTEXT insertion point supplied when the editor was opened. */
   public getMTextInsertionPoint(): THREE.Vector3 {
-    return this.position.clone().add(this.mtextInsertionOffset);
+    return this.position.clone();
   }
 
   /** Returns current internal state snapshot. */
@@ -1074,7 +1138,12 @@ export class MTextInputBox {
     toolbar.setAnchor(bounds.minX, bounds.minY - this.toolbarOffsetY);
   }
 
-  private getEditorScreenBounds(): { minX: number; maxX: number; minY: number; maxY: number } | null {
+  private getEditorScreenBounds(): {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+  } | null {
     if (!this.imeTarget) return null;
 
     const rect = this.imeTarget.getBoundingClientRect();
@@ -1097,8 +1166,8 @@ export class MTextInputBox {
 
     for (const corner of corners) {
       const projected = corner.clone().project(this.camera);
-      const sx = rect.left + ((projected.x + 1) * 0.5) * rect.width;
-      const sy = rect.top + ((1 - projected.y) * 0.5) * rect.height;
+      const sx = rect.left + (projected.x + 1) * 0.5 * rect.width;
+      const sy = rect.top + (1 - projected.y) * 0.5 * rect.height;
 
       minX = Math.min(minX, sx);
       maxX = Math.max(maxX, sx);
@@ -1203,11 +1272,7 @@ export class MTextInputBox {
       const mtextData = this.createMTextData();
       const style = this.createTextStyle();
       const colorSettings = this.resolveRenderColorSettings();
-      const object = this.mtextRenderer.syncRenderMText(
-        mtextData,
-        style,
-        colorSettings
-      );
+      const object = this.mtextRenderer.syncRenderMText(mtextData, style, colorSettings);
 
       this.replaceRenderedObject(object);
 
@@ -1230,7 +1295,10 @@ export class MTextInputBox {
   private ensureFontsLoaded(): void {
     if (this.pendingFontLoad) return;
     const fonts = this.collectFontNamesForText();
-    const key = fonts.map((font) => font.toLowerCase()).sort().join('|');
+    const key = fonts
+      .map((font) => font.toLowerCase())
+      .sort()
+      .join('|');
     if (!key || key === this.lastFontKey) return;
     this.lastFontKey = key;
     this.pendingFontLoad = this.mtextRenderer
@@ -1288,7 +1356,9 @@ export class MTextInputBox {
     const nextIndex = Math.min(this.cursorIndex, this.charCount());
     const maxLineIndex = Math.max(0, this.cursorLogic.getLineCount() - 1);
     const pendingLineHint =
-      this.pendingCursorLineHint === null ? null : Math.max(0, Math.min(this.pendingCursorLineHint, maxLineIndex));
+      this.pendingCursorLineHint === null
+        ? null
+        : Math.max(0, Math.min(this.pendingCursorLineHint, maxLineIndex));
     this.pendingCursorLineHint = null;
     this.cursorLogic.moveTo(nextIndex, pendingLineHint);
 
@@ -1358,10 +1428,7 @@ export class MTextInputBox {
     };
   }
 
-  private normalizeRenderedTopAlignment(
-    object: MTextObject,
-    rendered: CursorLayoutData
-  ): void {
+  private normalizeRenderedTopAlignment(object: MTextObject, rendered: CursorLayoutData): void {
     const topY = rendered.containerBox.y + rendered.containerBox.height;
     const dy = -topY;
     if (!Number.isFinite(dy) || Math.abs(dy) < 1e-8) return;
@@ -1451,7 +1518,8 @@ export class MTextInputBox {
   private createBoundingBox(enabled: boolean, style?: MTextBoundingBoxStyle): void {
     if (!enabled) return;
 
-    const color = typeof style?.color === 'number' ? style.color : new THREE.Color(style?.color ?? '#58a6ff');
+    const color =
+      typeof style?.color === 'number' ? style.color : new THREE.Color(style?.color ?? '#58a6ff');
     this.boundingBoxPadding = Math.max(0, style?.padding ?? 1);
     this.boundingBoxZOffset = style?.zOffset ?? 0.01;
     const material = new THREE.LineBasicMaterial({
@@ -1512,11 +1580,13 @@ export class MTextInputBox {
   private forceVisibleMaterialState(object: MTextObject): void {
     object.traverse((child: THREE.Object3D) => {
       const meshLike = child as THREE.Mesh;
-      const materials = (meshLike.material
-        ? Array.isArray(meshLike.material)
-          ? meshLike.material
-          : [meshLike.material]
-        : []) as THREE.Material[];
+      const materials = (
+        meshLike.material
+          ? Array.isArray(meshLike.material)
+            ? meshLike.material
+            : [meshLike.material]
+          : []
+      ) as THREE.Material[];
 
       for (const mat of materials) {
         const m = mat as THREE.Material & {
@@ -1527,10 +1597,10 @@ export class MTextInputBox {
           opacity?: number;
         };
 
-        if (typeof m.side !== "undefined") m.side = THREE.DoubleSide;
-        if (typeof m.depthTest !== "undefined") m.depthTest = false;
-        if (typeof m.depthWrite !== "undefined") m.depthWrite = false;
-        if (typeof m.transparent !== "undefined" && typeof m.opacity !== "undefined") {
+        if (typeof m.side !== 'undefined') m.side = THREE.DoubleSide;
+        if (typeof m.depthTest !== 'undefined') m.depthTest = false;
+        if (typeof m.depthWrite !== 'undefined') m.depthWrite = false;
+        if (typeof m.transparent !== 'undefined' && typeof m.opacity !== 'undefined') {
           m.transparent = m.opacity < 1;
         }
         m.needsUpdate = true;
@@ -1553,7 +1623,9 @@ export class MTextInputBox {
       if (mesh.geometry) {
         mesh.geometry.dispose();
       }
-      const materials = (mesh.material ? (Array.isArray(mesh.material) ? mesh.material : [mesh.material]) : []) as THREE.Material[];
+      const materials = (
+        mesh.material ? (Array.isArray(mesh.material) ? mesh.material : [mesh.material]) : []
+      ) as THREE.Material[];
       for (const material of materials) {
         const withMap = material as THREE.Material & { map?: THREE.Texture };
         if (withMap.map) withMap.map.dispose();
@@ -1561,7 +1633,6 @@ export class MTextInputBox {
       }
     });
   }
-
 
   private isExplicitAci(aci: number | null): aci is number {
     return aci !== null && Number.isInteger(aci) && aci > 0 && aci < 256;
@@ -1586,7 +1657,10 @@ export class MTextInputBox {
     return 0xffffff;
   }
 
-  private resolveBaseFormatColor(colorSettings: ColorSettings): { aci: number | null; rgb: number | null } {
+  private resolveBaseFormatColor(colorSettings: ColorSettings): {
+    aci: number | null;
+    rgb: number | null;
+  } {
     const color = colorSettings.color;
     if (color.isRgb && color.rgbValue !== null) {
       return { aci: null, rgb: this.normalizeColorNumber(color.rgbValue) };
@@ -1606,7 +1680,10 @@ export class MTextInputBox {
     return { aci: null, rgb: this.normalizeColorNumber(colorSettings.byLayerColor) };
   }
 
-  private createBaseFormatFromTextStyle(style: TextStyle, colorSettings: ColorSettings): CharFormat {
+  private createBaseFormatFromTextStyle(
+    style: TextStyle,
+    colorSettings: ColorSettings
+  ): CharFormat {
     const base = defaultCharFormat();
     base.fontFamily = style.font || base.fontFamily;
     base.fontSize = Math.max(1, style.fixedTextHeight);
@@ -1649,7 +1726,6 @@ export class MTextInputBox {
     return { byLayerColor: base, byBlockColor: base, color: new MTextColor(256) };
   }
 
-
   private focusImeInput(): void {
     if (!this.imeInput) return;
     this.imeInput.focus({ preventScroll: true });
@@ -1674,8 +1750,8 @@ export class MTextInputBox {
     const projected = world.project(this.camera);
     const rect = this.imeTarget.getBoundingClientRect();
 
-    const x = rect.left + ((projected.x + 1) * 0.5) * rect.width;
-    const y = rect.top + ((1 - projected.y) * 0.5) * rect.height;
+    const x = rect.left + (projected.x + 1) * 0.5 * rect.width;
+    const y = rect.top + (1 - projected.y) * 0.5 * rect.height;
 
     this.imeInput.style.left = `${Math.round(x)}px`;
     this.imeInput.style.top = `${Math.round(y)}px`;
@@ -1741,7 +1817,11 @@ export class MTextInputBox {
         chars.push('');
         continue;
       }
-      if (node.type === 'paragraphBreak' || node.type === 'columnBreak' || node.type === 'wrapAtDimLine') {
+      if (
+        node.type === 'paragraphBreak' ||
+        node.type === 'columnBreak' ||
+        node.type === 'wrapAtDimLine'
+      ) {
         chars.push('\n');
       }
     }
@@ -1833,15 +1913,15 @@ export class MTextInputBox {
     };
   }
 
-  private getNodeLogicalSpan(node: MTextAst["nodes"][number]): number {
+  private getNodeLogicalSpan(node: MTextAst['nodes'][number]): number {
     switch (node.type) {
-      case "char":
+      case 'char':
         return 1;
-      case "stack":
+      case 'stack':
         return 1;
-      case "paragraphBreak":
-      case "columnBreak":
-      case "wrapAtDimLine":
+      case 'paragraphBreak':
+      case 'columnBreak':
+      case 'wrapAtDimLine':
         // Structural line-break nodes do not have a visual char box, so
         // they must not consume logical cursor positions.
         return 0;
@@ -1917,7 +1997,9 @@ export class MTextInputBox {
       const minCandidateLine = candidates[0]?.lineIndex ?? 0;
       const maxCandidateLine = candidates[candidates.length - 1]?.lineIndex ?? 0;
       if (lineIndexHint < minCandidateLine || lineIndexHint > maxCandidateLine) {
-        return preferAfterZeroSpan ? candidates[candidates.length - 1]!.index : candidates[0]!.index;
+        return preferAfterZeroSpan
+          ? candidates[candidates.length - 1]!.index
+          : candidates[0]!.index;
       }
 
       let best = candidates[0]!;
@@ -1942,7 +2024,8 @@ export class MTextInputBox {
     lineIndexHint: number
   ): number | undefined {
     if (candidates.length <= 1) return undefined;
-    if (this.cursorLogic == null || typeof this.cursorLogic.getLines !== 'function') return undefined;
+    if (this.cursorLogic == null || typeof this.cursorLogic.getLines !== 'function')
+      return undefined;
 
     const lines = this.cursorLogic.getLines();
     if (!Array.isArray(lines) || lines.length === 0) return undefined;
@@ -1967,7 +2050,10 @@ export class MTextInputBox {
     this.mtextString = this.document.toMText();
 
     const logicalLength = this.charCount();
-    this.cursorIndex = Math.min(this.toLogicalIndexFromDocumentIndex(this.document.cursor), logicalLength);
+    this.cursorIndex = Math.min(
+      this.toLogicalIndexFromDocumentIndex(this.document.cursor),
+      logicalLength
+    );
 
     const selection = this.document.selection;
     if (selection) {
@@ -1992,7 +2078,8 @@ export class MTextInputBox {
     this.document.clearSelection();
     const cursorState = this.cursorLogic.getCursorState();
     const lineIndexHint = cursorState.lineIndex;
-    const preferAfterZeroSpan = cursorState.isAtLineEnd && !cursorState.isAtLineStart ? false : true;
+    const preferAfterZeroSpan =
+      cursorState.isAtLineEnd && !cursorState.isAtLineStart ? false : true;
     this.document.cursor = this.toDocumentIndexFromLogicalIndex(
       this.cursorIndex,
       preferAfterZeroSpan,
@@ -2026,7 +2113,11 @@ export class MTextInputBox {
       const selectedNodes = this.document.ast.nodes.slice(start, end);
       if (selectedNodes.length === 1 && selectedNodes[0]?.type === 'stack') {
         const stackNode = selectedNodes[0];
-        const plainText = this.stackNodeToPlainText(stackNode.numerator, stackNode.denominator, stackNode.divider);
+        const plainText = this.stackNodeToPlainText(
+          stackNode.numerator,
+          stackNode.denominator,
+          stackNode.divider
+        );
         const plainNodes = Array.from(plainText).map((char) => ({
           type: 'char' as const,
           value: char,
@@ -2081,7 +2172,11 @@ export class MTextInputBox {
       const selectedNodes = this.document.ast.nodes.slice(start, end);
       if (selectedNodes.length === 1 && selectedNodes[0]?.type === 'stack') {
         const stackNode = selectedNodes[0];
-        const plainText = this.scriptStackToPlainText(stackNode.numerator, stackNode.denominator, stackNode.divider);
+        const plainText = this.scriptStackToPlainText(
+          stackNode.numerator,
+          stackNode.denominator,
+          stackNode.divider
+        );
         if (!plainText) return;
 
         const plainStyle = this.cloneDocumentStyle(stackNode.style);
@@ -2113,7 +2208,8 @@ export class MTextInputBox {
 
       const scriptStyle = this.cloneDocumentStyle(first.style);
       scriptStyle.script = script;
-      scriptStyle.align = script === 'superscript' ? MTextLineAlignment.TOP : MTextLineAlignment.BOTTOM;
+      scriptStyle.align =
+        script === 'superscript' ? MTextLineAlignment.TOP : MTextLineAlignment.BOTTOM;
 
       const stackNode = {
         type: 'stack' as const,
@@ -2179,7 +2275,10 @@ export class MTextInputBox {
     const selection = this.document.selection;
     if (!!snapshot.selection !== !!selection) return false;
     if (snapshot.selection && selection) {
-      if (snapshot.selection.start !== selection.start || snapshot.selection.end !== selection.end) {
+      if (
+        snapshot.selection.start !== selection.start ||
+        snapshot.selection.end !== selection.end
+      ) {
         return false;
       }
     }
@@ -2222,7 +2321,11 @@ export class MTextInputBox {
     return `${numerator}${divider}${denominator}`;
   }
 
-  private scriptStackToPlainText(numerator: string, denominator: string, divider: string): string | null {
+  private scriptStackToPlainText(
+    numerator: string,
+    denominator: string,
+    divider: string
+  ): string | null {
     if (divider !== '^') return null;
     const hasNumerator = numerator.trim().length > 0;
     const hasDenominator = denominator.trim().length > 0;
@@ -2279,7 +2382,11 @@ export class MTextInputBox {
     toolbar.setStackActive(active);
   }
 
-  private isScriptOnlyStack(node: { numerator: string; denominator: string; divider: string }): boolean {
+  private isScriptOnlyStack(node: {
+    numerator: string;
+    denominator: string;
+    divider: string;
+  }): boolean {
     if (node.divider !== '^') return false;
     const hasNumerator = node.numerator.trim().length > 0;
     const hasDenominator = node.denominator.trim().length > 0;
@@ -2394,7 +2501,11 @@ export class MTextInputBox {
     };
   }
 
-  private toScriptFromStyle(style: MTextStyle, baseSize: number, capHeight: number): CharFormat['script'] {
+  private toScriptFromStyle(
+    style: MTextStyle,
+    baseSize: number,
+    capHeight: number
+  ): CharFormat['script'] {
     const reducedThreshold = Math.max(1, baseSize) * 0.9;
     const isReduced = capHeight <= reducedThreshold;
 
@@ -2514,7 +2625,7 @@ export class MTextInputBox {
       strikeThrough: style.strikeThrough,
       script: style.script,
       aci: style.aci,
-      rgb: style.rgb ? [...style.rgb] as [number, number, number] : null,
+      rgb: style.rgb ? ([...style.rgb] as [number, number, number]) : null,
       align: style.align,
       fontFace: { ...style.fontFace },
       capHeight: { ...style.capHeight },
@@ -2533,9 +2644,10 @@ export class MTextInputBox {
 
   private toDocumentStyle(format: CharFormat): MTextStyle {
     const explicitAci = this.isExplicitAci(format.aci) ? format.aci : null;
-    const rgbColor = explicitAci !== null
-      ? null
-      : this.colorNumberToRgbArray(format.rgb !== null ? format.rgb : this.resolveBaseColor());
+    const rgbColor =
+      explicitAci !== null
+        ? null
+        : this.colorNumberToRgbArray(format.rgb !== null ? format.rgb : this.resolveBaseColor());
 
     const isScript = format.script !== 'normal';
     const capHeight = Math.max(1, format.fontSize * (isScript ? 0.7 : 1));

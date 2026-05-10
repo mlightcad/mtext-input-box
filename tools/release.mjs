@@ -4,7 +4,7 @@ import { execSync } from 'node:child_process';
 function run(cmd) {
   return execSync(cmd, {
     encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: ['ignore', 'pipe', 'pipe']
   }).trim();
 }
 
@@ -22,7 +22,7 @@ function parseVersion(tag) {
   return {
     major: Number(m[1]),
     minor: Number(m[2]),
-    patch: Number(m[3]),
+    patch: Number(m[3])
   };
 }
 
@@ -35,8 +35,8 @@ function findLatestTag() {
 
   const tags = output
     .split('\n')
-    .map(t => ({ tag: t, v: parseVersion(t) }))
-    .filter(t => t.v !== null);
+    .map((t) => ({ tag: t, v: parseVersion(t) }))
+    .filter((t) => t.v !== null);
 
   if (tags.length === 0) return null;
 

@@ -9,17 +9,32 @@ function requireNode<T>(node: T | null, selector: string): T {
 
 const canvas = requireNode(document.querySelector<HTMLCanvasElement>('#stage'), '#stage');
 const status = requireNode(document.querySelector<HTMLElement>('#status'), '#status');
-const sceneSelect = requireNode(document.querySelector<HTMLSelectElement>('#sceneSelect'), '#sceneSelect');
+const sceneSelect = requireNode(
+  document.querySelector<HTMLSelectElement>('#sceneSelect'),
+  '#sceneSelect'
+);
 const tolerance = requireNode(document.querySelector<HTMLInputElement>('#tolerance'), '#tolerance');
-const toleranceValue = requireNode(document.querySelector<HTMLElement>('#toleranceValue'), '#toleranceValue');
-const zoomInBtn = requireNode(document.querySelector<HTMLButtonElement>('#zoomInBtn'), '#zoomInBtn');
-const zoomOutBtn = requireNode(document.querySelector<HTMLButtonElement>('#zoomOutBtn'), '#zoomOutBtn');
+const toleranceValue = requireNode(
+  document.querySelector<HTMLElement>('#toleranceValue'),
+  '#toleranceValue'
+);
+const zoomInBtn = requireNode(
+  document.querySelector<HTMLButtonElement>('#zoomInBtn'),
+  '#zoomInBtn'
+);
+const zoomOutBtn = requireNode(
+  document.querySelector<HTMLButtonElement>('#zoomOutBtn'),
+  '#zoomOutBtn'
+);
 const zoomResetBtn = requireNode(
   document.querySelector<HTMLButtonElement>('#zoomResetBtn'),
   '#zoomResetBtn'
 );
 const zoomValue = requireNode(document.querySelector<HTMLElement>('#zoomValue'), '#zoomValue');
-const dragToggle = requireNode(document.querySelector<HTMLInputElement>('#dragToggle'), '#dragToggle');
+const dragToggle = requireNode(
+  document.querySelector<HTMLInputElement>('#dragToggle'),
+  '#dragToggle'
+);
 const leftBtn = requireNode(document.querySelector<HTMLButtonElement>('#leftBtn'), '#leftBtn');
 const rightBtn = requireNode(document.querySelector<HTMLButtonElement>('#rightBtn'), '#rightBtn');
 const upBtn = requireNode(document.querySelector<HTMLButtonElement>('#upBtn'), '#upBtn');

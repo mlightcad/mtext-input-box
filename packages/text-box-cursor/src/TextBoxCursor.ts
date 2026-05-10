@@ -87,7 +87,10 @@ export class TextBoxCursor {
     if (currentLineIndex >= 0) {
       const currentLine = this.lines[currentLineIndex];
       if (currentLine) {
-        if (this.cursorIndex > currentLine.startIndex && this.cursorIndex <= currentLine.endIndex + 1) {
+        if (
+          this.cursorIndex > currentLine.startIndex &&
+          this.cursorIndex <= currentLine.endIndex + 1
+        ) {
           this.moveTo(this.cursorIndex - 1, currentLineIndex);
           return;
         }
@@ -242,13 +245,17 @@ export class TextBoxCursor {
 
   /** Returns current selection state, or `null` when no selection exists. */
   getSelection(): SelectionState | null {
-    return this.selection ? { ...this.selection, selectedLines: [...this.selection.selectedLines] } : null;
+    return this.selection
+      ? { ...this.selection, selectedLines: [...this.selection.selectedLines] }
+      : null;
   }
 
   /** Returns defensive copies of boxes covered by current selection. */
   getSelectedCharBoxes(): Box[] {
     if (!this.selection || this.selection.isCollapsed) return [];
-    return this.charBoxes.slice(this.selection.start, this.selection.end).map((box) => ({ ...box }));
+    return this.charBoxes
+      .slice(this.selection.start, this.selection.end)
+      .map((box) => ({ ...box }));
   }
 
   /** Returns selected segments expressed in per-line offsets. */
@@ -414,9 +421,13 @@ export class TextBoxCursor {
       isAtStart: this.cursorIndex === 0,
       isAtEnd: this.cursorIndex === this.charBoxes.length,
       isAtLineStart:
-        lineIndex < 0 ? true : this.cursorIndex === (this.lines[lineIndex]?.startIndex ?? this.cursorIndex),
+        lineIndex < 0
+          ? true
+          : this.cursorIndex === (this.lines[lineIndex]?.startIndex ?? this.cursorIndex),
       isAtLineEnd:
-        lineIndex < 0 ? true : this.cursorIndex === (this.lines[lineIndex]?.endIndex ?? this.cursorIndex - 1) + 1
+        lineIndex < 0
+          ? true
+          : this.cursorIndex === (this.lines[lineIndex]?.endIndex ?? this.cursorIndex - 1) + 1
     };
   }
 
@@ -428,13 +439,19 @@ export class TextBoxCursor {
   /** Returns current cursor pixel position derived from index and line alignment. */
   getCursorPosition(): { x: number; y: number } {
     if (this.lines.length === 0) {
-      return { x: this.containerBox.x, y: this.alignY(this.containerBox.y, this.containerBox.height) };
+      return {
+        x: this.containerBox.x,
+        y: this.alignY(this.containerBox.y, this.containerBox.height)
+      };
     }
 
     const lineIndex = this.getCurrentLineIndex();
     const line = this.lines[Math.max(0, lineIndex)];
     if (!line) {
-      return { x: this.containerBox.x, y: this.alignY(this.containerBox.y, this.containerBox.height) };
+      return {
+        x: this.containerBox.x,
+        y: this.alignY(this.containerBox.y, this.containerBox.height)
+      };
     }
     const y = this.alignY(line.y, line.height);
     const x = this.indexToX(this.cursorIndex, lineIndex);
@@ -488,7 +505,10 @@ export class TextBoxCursor {
     this.emit('linesUpdate', this.getLines());
     this.emitCursor();
     if (this.selection) {
-      this.selection.selectedLines = this.resolveSelectedLines(this.selection.start, this.selection.end);
+      this.selection.selectedLines = this.resolveSelectedLines(
+        this.selection.start,
+        this.selection.end
+      );
       this.emit('selectionChange', this.selection);
     }
   }
@@ -687,12 +707,22 @@ export class TextBoxCursor {
         lines.push(this.createEmptyLine(start, lines[lines.length - 1], lineLayouts[lines.length]));
         continue;
       }
-      lines.push(this.withLineLayout(this.aggregateLine(charBoxes, start, breakIndex - 1), lineLayouts[lines.length]));
+      lines.push(
+        this.withLineLayout(
+          this.aggregateLine(charBoxes, start, breakIndex - 1),
+          lineLayouts[lines.length]
+        )
+      );
       start = breakIndex;
     }
 
     if (start < charBoxes.length) {
-      lines.push(this.withLineLayout(this.aggregateLine(charBoxes, start, charBoxes.length - 1), lineLayouts[lines.length]));
+      lines.push(
+        this.withLineLayout(
+          this.aggregateLine(charBoxes, start, charBoxes.length - 1),
+          lineLayouts[lines.length]
+        )
+      );
     } else {
       lines.push(this.createEmptyLine(start, lines[lines.length - 1], lineLayouts[lines.length]));
     }
@@ -770,7 +800,11 @@ export class TextBoxCursor {
     };
   }
 
-  private createEmptyLine(index: number, previousLine?: LineInfo, lineLayout?: LineLayoutInput): LineInfo {
+  private createEmptyLine(
+    index: number,
+    previousLine?: LineInfo,
+    lineLayout?: LineLayoutInput
+  ): LineInfo {
     if (lineLayout) {
       return {
         startIndex: index,
@@ -824,7 +858,9 @@ export class TextBoxCursor {
   private getGapPositions(lineIndex: number): { index: number; x: number }[] {
     const line = this.lines[lineIndex];
     if (!line) return [];
-    const positions: { index: number; x: number }[] = [{ index: line.startIndex, x: this.containerBox.x }];
+    const positions: { index: number; x: number }[] = [
+      { index: line.startIndex, x: this.containerBox.x }
+    ];
     for (let i = line.startIndex; i <= line.endIndex; i++) {
       const box = this.charBoxes[i];
       if (!box) continue;

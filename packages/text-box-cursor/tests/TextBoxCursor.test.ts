@@ -117,8 +117,18 @@ describe('line detection', () => {
 
     expect(cursor.getLineCount()).toBe(3);
     expect(cursor.getLines()[0]).toMatchObject({ startIndex: 0, endIndex: 1, charCount: 2 });
-    expect(cursor.getLines()[1]).toMatchObject({ startIndex: 2, endIndex: 1, y: 120, charCount: 0 });
-    expect(cursor.getLines()[2]).toMatchObject({ startIndex: 2, endIndex: 3, y: 140, charCount: 2 });
+    expect(cursor.getLines()[1]).toMatchObject({
+      startIndex: 2,
+      endIndex: 1,
+      y: 120,
+      charCount: 0
+    });
+    expect(cursor.getLines()[2]).toMatchObject({
+      startIndex: 2,
+      endIndex: 3,
+      y: 140,
+      charCount: 2
+    });
   });
 
   test('supports leading and trailing empty lines via boundary break indices', () => {
@@ -525,10 +535,9 @@ describe('api and events', () => {
       { x: 10, y: 140, width: 10, height: 20 }
     ]);
     cursor.setSelectionWithDirection(2, 3);
-    cursor.updateData(
-      { x: 0, y: 0, width: 200, height: 200 },
-      [{ x: 10, y: 100, width: 10, height: 20 }]
-    );
+    cursor.updateData({ x: 0, y: 0, width: 200, height: 200 }, [
+      { x: 10, y: 100, width: 10, height: 20 }
+    ]);
     expect(cursor.getLineCount()).toBe(1);
     expect(cursor.getCurrentIndex()).toBe(1);
     expect(cursor.getSelection()).toBeNull();
@@ -621,7 +630,9 @@ describe('api and events', () => {
 
   test('internal index mapping handles out-of-line index fallback', () => {
     const cursor = makeCursor([{ x: 10, y: 100, width: 10, height: 20 }]);
-    const internal = cursor as unknown as { indexToX: (index: number, lineIndexHint?: number) => number };
+    const internal = cursor as unknown as {
+      indexToX: (index: number, lineIndexHint?: number) => number;
+    };
     expect(internal.indexToX(3, 0)).toBe(20);
   });
 });

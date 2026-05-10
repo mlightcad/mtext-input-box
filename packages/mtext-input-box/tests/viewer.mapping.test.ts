@@ -308,7 +308,11 @@ describe('MTextInputBox cursor/document index mapping', () => {
 
   test('normalizes rendered content so position stays at the top-left edge', () => {
     const proto = MTextInputBox.prototype as unknown as Record<string, (...args: any[]) => any>;
-    const normalizeRenderedTopAlignment = proto.normalizeRenderedTopAlignment as (this: any, obj: any, data: any) => void;
+    const normalizeRenderedTopAlignment = proto.normalizeRenderedTopAlignment as (
+      this: any,
+      obj: any,
+      data: any
+    ) => void;
     const object = {
       position: new THREE.Vector3(0, 0, 0),
       updateMatrixWorld: vi.fn()
@@ -332,7 +336,7 @@ describe('MTextInputBox cursor/document index mapping', () => {
     expect(rendered.lineLayouts[0].y).toBe(-5);
   });
 
-  test('returns persisted MTEXT insertion point with render alignment offset', () => {
+  test('returns the original MTEXT insertion point without render alignment offset', () => {
     const proto = MTextInputBox.prototype as unknown as Record<string, (...args: any[]) => any>;
     const getMTextInsertionPoint = proto.getMTextInsertionPoint as (this: any) => THREE.Vector3;
     const context = {
@@ -342,7 +346,7 @@ describe('MTextInputBox cursor/document index mapping', () => {
 
     const result = getMTextInsertionPoint.call(context);
 
-    expect(result.toArray()).toEqual([10, 10, 2]);
+    expect(result.toArray()).toEqual([10, 20, 2]);
     expect(result).not.toBe(context.position);
   });
 
@@ -380,9 +384,18 @@ describe('MTextInputBox cursor/document index mapping', () => {
       cursorLogic: {
         getCharBoxes: () => [],
         getCurrentIndex: () => 0,
-        getCurrentLineInfo: () => ({ startIndex: 0, endIndex: -1, charCount: 0, y: -24, height: 24 })
+        getCurrentLineInfo: () => ({
+          startIndex: 0,
+          endIndex: -1,
+          charCount: 0,
+          y: -24,
+          height: 24
+        })
       },
-      latestCursorLayoutData: { containerBox: { x: 0, y: -24, width: 300, height: 24 }, charBoxes: [] },
+      latestCursorLayoutData: {
+        containerBox: { x: 0, y: -24, width: 300, height: 24 },
+        charBoxes: []
+      },
       layoutContainer: { x: 0, y: -24, width: 300, height: 24 },
       getFallbackLineAdvance: () => 24
     };
