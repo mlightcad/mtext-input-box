@@ -1,5 +1,10 @@
 import type { Box, CursorStyle, SelectionStyle } from '@mlightcad/text-box-cursor';
-import type { ColorSettings, MTextColor, TextStyle } from '@mlightcad/mtext-renderer';
+import type {
+  ColorSettings,
+  MTextColor,
+  MTextParagraphAlignment,
+  TextStyle
+} from '@mlightcad/mtext-renderer';
 import type * as THREE from 'three';
 
 /** Vertical script style for a character run. */
@@ -26,6 +31,22 @@ export interface CharFormat {
   aci: number | null;
   /** Explicit RGB color packed as `0xRRGGBB`. */
   rgb: number | null;
+  /**
+   * Character slant in degrees (AutoCAD oblique; negative leans the other way).
+   * Serialized to MTEXT as `\Qangle;`.
+   */
+  obliqueAngle: number;
+  /** Horizontal scale of characters (width factor). Serialized as `\Wvalue;`. */
+  widthFactor: number;
+  /**
+   * Inter-character spacing factor (MTEXT `\T` tracking). `1` is the default spacing.
+   */
+  tracking: number;
+  /**
+   * Paragraph horizontal alignment for the active paragraph (cursor or selection).
+   * Uses {@link MTextParagraphAlignment} from the shared MTEXT stack (parser / renderer).
+   */
+  paragraphAlignment: MTextParagraphAlignment;
 }
 
 /** Internal editor state snapshot used for updates and history-like operations. */

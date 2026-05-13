@@ -13,7 +13,7 @@ Core packages live under `packages/`:
 
 ## Tooling
 
-- Package manager: `pnpm` (repo expects `pnpm@9.15.9`).
+- Package manager: `pnpm` (repo expects `pnpm@10.33.4` per root `packageManager`; `engines.pnpm` is `>=10`).
 - Language: TypeScript (ESM).
 - Demos use Vite (`pnpm --filter <pkg> dev`).
 

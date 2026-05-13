@@ -1,4 +1,5 @@
 import type { CharFormat } from './types';
+import { MTextParagraphAlignment } from '@mlightcad/mtext-renderer';
 
 export const DEFAULT_FONT_FAMILY = 'simkai';
 
@@ -14,7 +15,11 @@ export function defaultCharFormat(): CharFormat {
     strike: false,
     script: 'normal',
     aci: null,
-    rgb: 0xffffff
+    rgb: 0xffffff,
+    obliqueAngle: 0,
+    widthFactor: 1,
+    tracking: 1,
+    paragraphAlignment: MTextParagraphAlignment.DEFAULT
   };
 }
 
@@ -30,6 +35,10 @@ export function sameFormat(a: CharFormat, b: CharFormat): boolean {
     a.strike === b.strike &&
     a.script === b.script &&
     a.aci === b.aci &&
-    a.rgb === b.rgb
+    a.rgb === b.rgb &&
+    a.obliqueAngle === b.obliqueAngle &&
+    a.widthFactor === b.widthFactor &&
+    a.tracking === b.tracking &&
+    a.paragraphAlignment === b.paragraphAlignment
   );
 }
