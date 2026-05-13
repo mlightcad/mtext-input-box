@@ -10,20 +10,23 @@ import {
 } from '@mlightcad/text-box-cursor';
 import {
   getColorByIndex,
-  UnifiedRenderer,
-  MTextAttachmentPoint,
-  MTextFlowDirection,
+  LINE_SPACING_SCALE_FACTOR,
   MText,
+  MTextAttachmentPoint,
   MTextColor,
+  MTextContext,
+  MTextFlowDirection,
+  MTextLineAlignment,
+  MTextParagraphAlignment,
+  UnifiedRenderer,
   type ColorSettings,
   type MTextData,
   type MTextObject,
   type TextStyle
 } from '@mlightcad/mtext-renderer';
 import * as THREE from 'three';
-import { MTextContext, MTextLineAlignment } from '@mlightcad/mtext-renderer';
 import { DEFAULT_FONT_FAMILY, defaultCharFormat, sameFormat } from './format';
-import { MTextDocument, type MTextAst, type MTextStyle } from '../model';
+import { hasNodeStyle, MTextDocument, type MTextAst, type MTextStyle } from '../model';
 import { EditorUiAdapter } from '../controller';
 import { MTextToolbar, type ToolbarOptions, type ToolbarSessionOptions } from '../ui/toolbar';
 import type {
@@ -81,6 +84,18 @@ export class MTextInputBox {
   private enableWordWrap: boolean;
 
   private mtextString = '';
+  /**
+   * Optional line spacing factor forwarded to {@link MTextData.lineSpaceFactor}.
+   * When `null`, the renderer default (same as {@link MTextInputBox.DEFAULT_LINE_SPACE_FACTOR}) is used.
+   */
+  private editorLineSpaceFactor: number | null = null;
+  /**
+   * MTEXT attachment (DXF group 71) for the editor box relative to
+   * {@link position}. Drives {@link createMTextData} and contextual ribbon
+   * "Justify" / attachment controls.
+   */
+  private editorAttachmentPoint: MTextAttachmentPoint = MTextAttachmentPoint.TopLeft;
+  private static readonly DEFAULT_LINE_SPACE_FACTOR = 0.3;
   private cursorIndex = 0;
   private selectionStart = 0;
   private selectionEnd = 0;
@@ -630,7 +645,6 @@ export class MTextInputBox {
     if (this.latestCursorLayoutData.lineLayouts) {
       snapshot.lineLayouts = this.latestCursorLayoutData.lineLayouts.map((line) => ({ ...line }));
     }
-    console.log(snapshot);
     return snapshot;
   }
 
@@ -648,7 +662,7 @@ export class MTextInputBox {
         for (const node of nodesToUpdate) {
           const nodeFormat = this.toCharFormat(node.style);
           const mergedNodeFormat = this.mergeCharFormat(nodeFormat, format);
-          node.style = this.toDocumentStyle(mergedNodeFormat);
+          node.style = this.toDocumentStyle(mergedNodeFormat, node.style);
         }
 
         this.syncUiStateFromDocument();
@@ -662,6 +676,89 @@ export class MTextInputBox {
   /** Returns current insertion format. */
   public getCurrentFormat(): CharFormat {
     return { ...this.currentFormat };
+  }
+
+  /**
+   * Sets horizontal alignment for every paragraph that overlaps the current
+   * selection or cursor, using the same ids as the contextual ribbon
+   * (`default`, `left`, `center`, `right`, `justified`, `distributed`).
+   */
+  public setParagraphAlignment(alignment: string): void {
+    const align = this.mapRibbonParagraphAlignment(alignment);
+    if (align === undefined) return;
+
+    this.commitHistoryEdit(() => {
+      this.syncDocumentFromUiState();
+
+      const selection = this.getSelectionRange();
+      const docStart = this.toDocumentIndexFromLogicalIndex(
+        Math.min(selection.start, selection.end),
+        true
+      );
+      const docEnd = this.toDocumentIndexFromLogicalIndex(
+        Math.max(selection.start, selection.end),
+        false
+      );
+
+      const nodes = this.document.ast.nodes;
+      if (nodes.length === 0) return;
+
+      const normalizeDocIndex = (idx: number) => {
+        const clamped = Math.max(0, Math.min(idx, nodes.length - 1));
+        if (nodes[clamped]?.type === 'paragraphBreak') {
+          return Math.min(clamped + 1, nodes.length);
+        }
+        return Math.min(idx, nodes.length - 1);
+      };
+
+      const findParagraphStart = (docIdx: number) => {
+        const i = normalizeDocIndex(docIdx);
+        for (let j = i; j >= 0; j--) {
+          if (nodes[j]?.type === 'paragraphBreak') return j + 1;
+        }
+        return 0;
+      };
+
+      const findParagraphEndExclusive = (docIdx: number) => {
+        const i = Math.min(Math.max(0, docIdx), nodes.length - 1);
+        for (let j = i; j < nodes.length; j++) {
+          if (nodes[j]?.type === 'paragraphBreak') return j;
+        }
+        return nodes.length;
+      };
+
+      const rangeStart = findParagraphStart(Math.min(docStart, docEnd));
+      const rangeEnd = findParagraphEndExclusive(Math.max(docStart, docEnd));
+
+      if (rangeStart >= rangeEnd) return;
+
+      for (let i = rangeStart; i < rangeEnd; i++) {
+        const node = nodes[i];
+        if (node && hasNodeStyle(node)) {
+          node.style.paragraph.align = align;
+        }
+      }
+
+      this.syncUiStateFromDocument();
+      this.relayout();
+    });
+  }
+
+  /**
+   * Sets the MTEXT attachment point using contextual ribbon codes (`TL`, `MC`,
+   * `BR`, etc.), matching AutoCAD nine-point attachment.
+   */
+  public setAttachmentPoint(attachmentPoint: string): void {
+    const next = this.mapRibbonAttachmentCode(attachmentPoint);
+    if (next === undefined || next === this.editorAttachmentPoint) return;
+    this.editorAttachmentPoint = next;
+    this.relayout();
+    this.emit('change');
+  }
+
+  /** Returns the current attachment as a two-letter ribbon / DXF-style code. */
+  public getAttachmentPointCode(): string {
+    return this.attachmentPointToRibbonCode(this.editorAttachmentPoint);
   }
 
   /** Toggles selected alphabetic text between upper and lower case. */
@@ -1690,11 +1787,16 @@ export class MTextInputBox {
     const color = this.resolveBaseFormatColor(colorSettings);
     base.aci = color.aci;
     base.rgb = color.rgb;
+    const wf = style.widthFactor;
+    base.widthFactor = typeof wf === 'number' && Number.isFinite(wf) ? Math.max(0.01, wf) : 1;
+    const obl = style.obliqueAngle;
+    base.obliqueAngle = typeof obl === 'number' && Number.isFinite(obl) ? obl : 0;
+    base.tracking = 1;
     return base;
   }
 
   private createMTextData(): MTextData {
-    return {
+    const data: MTextData = {
       text: this.mtextString,
       height: Math.max(1, this.defaultTextStyle.fixedTextHeight),
       width: this.width,
@@ -1703,11 +1805,46 @@ export class MTextInputBox {
         y: this.position.y,
         z: this.position.z
       },
-      attachmentPoint: MTextAttachmentPoint.TopLeft,
+      attachmentPoint: this.editorAttachmentPoint,
       drawingDirection: MTextFlowDirection.LEFT_TO_RIGHT,
       widthFactor: 1,
       collectCharBoxes: true
     };
+    if (this.editorLineSpaceFactor != null && Number.isFinite(this.editorLineSpaceFactor)) {
+      data.lineSpaceFactor = this.editorLineSpaceFactor;
+    }
+    return data;
+  }
+
+  /**
+   * Line spacing factor used for layout and returned when the host commits the editor.
+   * Matches the ribbon / `AcEdMTextEditor` default when no override is set.
+   */
+  public getLineSpacingFactor(): number {
+    return this.editorLineSpaceFactor ?? MTextInputBox.DEFAULT_LINE_SPACE_FACTOR;
+  }
+
+  /**
+   * Applies paragraph line spacing from ribbon-style multiples (`1` = default /
+   * single, `2` = default plus one text-line height of extra gap, etc.).
+   * Values in `(0, 1)` are still treated as raw renderer `lineSpaceFactor`
+   * for callers that set CAD factors directly.
+   */
+  public setLineSpacingFactor(factor: number): void {
+    if (!Number.isFinite(factor) || factor <= 0) return;
+    const defaultF = MTextInputBox.DEFAULT_LINE_SPACE_FACTOR;
+    const rendererFactor =
+      factor >= 1 ? Math.max(0.01, defaultF + (factor - 1) / LINE_SPACING_SCALE_FACTOR) : factor;
+    this.editorLineSpaceFactor = rendererFactor;
+    this.relayout();
+    this.emit('change');
+  }
+
+  /** Clears the explicit line spacing override and uses the renderer default. */
+  public clearLineSpacing(): void {
+    this.editorLineSpaceFactor = null;
+    this.relayout();
+    this.emit('change');
   }
 
   private getFallbackLineAdvance(): number {
@@ -2487,6 +2624,13 @@ export class MTextInputBox {
     const logicalFontSize =
       script === 'normal' ? capHeight : isReducedScriptCapHeight ? capHeight / 0.7 : capHeight;
 
+    const wf = style.widthFactor?.value;
+    const widthFactor = typeof wf === 'number' && Number.isFinite(wf) ? Math.max(0.01, wf) : 1;
+    const tr = style.charTrackingFactor?.value;
+    const tracking = typeof tr === 'number' && Number.isFinite(tr) ? Math.max(0.01, tr) : 1;
+    const oblique =
+      typeof style.oblique === 'number' && Number.isFinite(style.oblique) ? style.oblique : 0;
+
     return {
       fontFamily: style.fontFace.family || defaultFontFamily,
       fontSize: Math.max(1, logicalFontSize || baseSize),
@@ -2497,7 +2641,11 @@ export class MTextInputBox {
       strike: style.strikeThrough,
       script,
       aci: resolvedAci,
-      rgb: resolvedColor
+      rgb: resolvedColor,
+      obliqueAngle: oblique,
+      widthFactor,
+      tracking,
+      paragraphAlignment: style.paragraph.align
     };
   }
 
@@ -2593,6 +2741,78 @@ export class MTextInputBox {
     return new MTextDocument(normalizedAst);
   }
 
+  private mapRibbonParagraphAlignment(alignment: string): MTextParagraphAlignment | undefined {
+    switch (alignment) {
+      case 'default':
+        return MTextParagraphAlignment.DEFAULT;
+      case 'left':
+        return MTextParagraphAlignment.LEFT;
+      case 'center':
+        return MTextParagraphAlignment.CENTER;
+      case 'right':
+        return MTextParagraphAlignment.RIGHT;
+      case 'justified':
+        return MTextParagraphAlignment.JUSTIFIED;
+      case 'distributed':
+        return MTextParagraphAlignment.DISTRIBUTED;
+      default:
+        return undefined;
+    }
+  }
+
+  private mapRibbonAttachmentCode(code: string): MTextAttachmentPoint | undefined {
+    switch (code.trim().toUpperCase()) {
+      case 'TL':
+        return MTextAttachmentPoint.TopLeft;
+      case 'TC':
+        return MTextAttachmentPoint.TopCenter;
+      case 'TR':
+        return MTextAttachmentPoint.TopRight;
+      case 'ML':
+        return MTextAttachmentPoint.MiddleLeft;
+      case 'MC':
+        return MTextAttachmentPoint.MiddleCenter;
+      case 'MR':
+        return MTextAttachmentPoint.MiddleRight;
+      case 'BL':
+        return MTextAttachmentPoint.BottomLeft;
+      case 'BC':
+        return MTextAttachmentPoint.BottomCenter;
+      case 'BR':
+        return MTextAttachmentPoint.BottomRight;
+      default:
+        return undefined;
+    }
+  }
+
+  private attachmentPointToRibbonCode(point: MTextAttachmentPoint): string {
+    switch (point) {
+      case MTextAttachmentPoint.TopLeft:
+        return 'TL';
+      case MTextAttachmentPoint.TopCenter:
+        return 'TC';
+      case MTextAttachmentPoint.TopRight:
+        return 'TR';
+      case MTextAttachmentPoint.MiddleLeft:
+        return 'ML';
+      case MTextAttachmentPoint.MiddleCenter:
+        return 'MC';
+      case MTextAttachmentPoint.MiddleRight:
+        return 'MR';
+      case MTextAttachmentPoint.BottomLeft:
+      case MTextAttachmentPoint.BaselineLeft:
+        return 'BL';
+      case MTextAttachmentPoint.BottomCenter:
+      case MTextAttachmentPoint.BaselineCenter:
+        return 'BC';
+      case MTextAttachmentPoint.BottomRight:
+      case MTextAttachmentPoint.BaselineRight:
+        return 'BR';
+      default:
+        return 'TL';
+    }
+  }
+
   private mergeCharFormat(base: CharFormat, patch: Partial<CharFormat>): CharFormat {
     const next: CharFormat = { ...base, ...patch };
 
@@ -2613,6 +2833,10 @@ export class MTextInputBox {
         next.rgb = this.normalizeColorNumber(patch.rgb);
         if (patch.aci === undefined) next.aci = null;
       }
+    }
+
+    if (patch.paragraphAlignment !== undefined) {
+      next.paragraphAlignment = patch.paragraphAlignment;
     }
 
     return next;
@@ -2642,7 +2866,7 @@ export class MTextInputBox {
     };
   }
 
-  private toDocumentStyle(format: CharFormat): MTextStyle {
+  private toDocumentStyle(format: CharFormat, existing?: MTextStyle): MTextStyle {
     const explicitAci = this.isExplicitAci(format.aci) ? format.aci : null;
     const rgbColor =
       explicitAci !== null
@@ -2658,6 +2882,8 @@ export class MTextInputBox {
           ? MTextLineAlignment.BOTTOM
           : MTextLineAlignment.MIDDLE;
 
+    const paragraphAlign = format.paragraphAlignment;
+
     return {
       underline: format.underline,
       overline: format.overline,
@@ -2672,15 +2898,21 @@ export class MTextInputBox {
         weight: format.bold ? 700 : 400
       },
       capHeight: { value: capHeight, isRelative: false },
-      widthFactor: { value: 1, isRelative: false },
-      charTrackingFactor: { value: 1, isRelative: false },
-      oblique: 0,
+      widthFactor: {
+        value: Math.max(0.01, format.widthFactor),
+        isRelative: false
+      },
+      charTrackingFactor: {
+        value: Math.max(0.01, format.tracking),
+        isRelative: false
+      },
+      oblique: format.obliqueAngle,
       paragraph: {
-        indent: 0,
-        left: 0,
-        right: 0,
-        align: 0,
-        tabs: []
+        indent: existing?.paragraph.indent ?? 0,
+        left: existing?.paragraph.left ?? 0,
+        right: existing?.paragraph.right ?? 0,
+        align: paragraphAlign,
+        tabs: existing?.paragraph.tabs ? [...existing.paragraph.tabs] : []
       }
     };
   }

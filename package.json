@@ -1,7 +1,18 @@
 {
   "name": "mtext-input-box-monorepo",
   "private": true,
-  "packageManager": "pnpm@9.15.9",
+  "packageManager": "pnpm@10.33.4",
+  "engines": {
+    "pnpm": ">=10"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "esbuild",
+      "nx",
+      "vue-demi"
+    ]
+  },
   "scripts": {
     "build": "pnpm --filter @mlightcad/text-box-cursor build && pnpm --filter @mlightcad/mtext-input-box build && pnpm --filter @mlightcad/demo-canvas-cursor build && pnpm --filter @mlightcad/demo-three-cursor build && pnpm --filter @mlightcad/demo-mtext-input-box build",
     "dev:canvas": "pnpm --filter @mlightcad/demo-canvas-cursor dev",

@@ -14,6 +14,7 @@
     "@mlightcad/text-box-cursor": "workspace:*"
   },
   "devDependencies": {
+    "@eslint/js": "^9.34.0",
     "@types/node": "^24.4.0",
     "@typescript-eslint/eslint-plugin": "^8.41.0",
     "@typescript-eslint/parser": "^8.41.0",
