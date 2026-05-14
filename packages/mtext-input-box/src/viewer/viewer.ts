@@ -1468,6 +1468,97 @@ export class MTextInputBox {
     this.syncStateFromCursor();
   }
 
+  /**
+   * Editor vertical bounds for the selection box / bounding overlay.
+   * Renderer `layout.lines` strips are often taller than actual glyphs (leading
+   * above the first row, uniform line-height slots, etc.). When a line has
+   * glyph boxes, use those for that row; keep the strip only for empty lines.
+   */
+  private computeEditorVerticalBounds(
+    lineLayouts: LineLayoutInput[],
+    charBoxes: Box[],
+    objectLocal: Box
+  ): { minY: number; maxY: number } {
+    const fallback = (): { minY: number; maxY: number } => ({
+      minY: objectLocal.y - objectLocal.height / 2,
+      maxY: objectLocal.y + objectLocal.height / 2
+    });
+
+    const overlapY = (a0: number, a1: number, b0: number, b1: number): boolean =>
+      a0 < b1 + 1e-4 && a1 > b0 - 1e-4;
+
+    if (lineLayouts.length === 0 && charBoxes.length === 0) {
+      return fallback();
+    }
+
+    if (lineLayouts.length === 0) {
+      let minY = Number.POSITIVE_INFINITY;
+      let maxY = Number.NEGATIVE_INFINITY;
+      for (const b of charBoxes) {
+        minY = Math.min(minY, b.y - b.height / 2);
+        maxY = Math.max(maxY, b.y + b.height / 2);
+      }
+      return Number.isFinite(minY) && Number.isFinite(maxY) && maxY >= minY
+        ? { minY, maxY }
+        : fallback();
+    }
+
+    if (charBoxes.length === 0) {
+      let minY = Number.POSITIVE_INFINITY;
+      let maxY = Number.NEGATIVE_INFINITY;
+      for (const line of lineLayouts) {
+        const lo = line.y - line.height / 2;
+        const hi = line.y + line.height / 2;
+        minY = Math.min(minY, lo);
+        maxY = Math.max(maxY, hi);
+      }
+      return Number.isFinite(minY) && Number.isFinite(maxY) && maxY >= minY
+        ? { minY, maxY }
+        : fallback();
+    }
+
+    let minY = Number.POSITIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+
+    for (const line of lineLayouts) {
+      const lo = line.y - line.height / 2;
+      const hi = line.y + line.height / 2;
+      const onLine = charBoxes.filter((b) => {
+        const c0 = b.y - b.height / 2;
+        const c1 = b.y + b.height / 2;
+        return overlapY(c0, c1, lo, hi);
+      });
+      if (onLine.length === 0) {
+        minY = Math.min(minY, lo);
+        maxY = Math.max(maxY, hi);
+      } else {
+        for (const b of onLine) {
+          minY = Math.min(minY, b.y - b.height / 2);
+          maxY = Math.max(maxY, b.y + b.height / 2);
+        }
+      }
+    }
+
+    for (const b of charBoxes) {
+      const c0 = b.y - b.height / 2;
+      const c1 = b.y + b.height / 2;
+      const overlapsAnyLine = lineLayouts.some((line) => {
+        const lo = line.y - line.height / 2;
+        const hi = line.y + line.height / 2;
+        return overlapY(c0, c1, lo, hi);
+      });
+      if (!overlapsAnyLine) {
+        minY = Math.min(minY, c0);
+        maxY = Math.max(maxY, c1);
+      }
+    }
+
+    if (!Number.isFinite(minY) || !Number.isFinite(maxY) || maxY < minY) {
+      return fallback();
+    }
+    return { minY, maxY };
+  }
+
   private extractBoxesFromRenderedObject(object: MTextObject): CursorLayoutData {
     const layout = object.createLayoutData();
     const charBoxes: Box[] = [];
@@ -1495,17 +1586,11 @@ export class MTextInputBox {
       .filter((value) => value >= 0 && value <= charBoxes.length);
 
     const local = this.toLocalBox(object.box);
-    let containerTop = local.y - local.height / 2;
-    let containerBottom = local.y + local.height / 2;
-
-    if (lineLayouts.length > 0) {
-      for (const line of lineLayouts) {
-        const top = line.y - line.height / 2;
-        const bottom = line.y + line.height / 2;
-        containerTop = Math.min(containerTop, top);
-        containerBottom = Math.max(containerBottom, bottom);
-      }
-    }
+    const { minY: containerTop, maxY: containerBottom } = this.computeEditorVerticalBounds(
+      lineLayouts,
+      charBoxes,
+      local
+    );
 
     const containerBox = {
       x: local.x,
@@ -1515,7 +1600,12 @@ export class MTextInputBox {
     };
     containerBox.x = 0;
     containerBox.width = this.width;
-    containerBox.height = Math.max(containerBox.height, this.getFallbackLineAdvance());
+    const minHeight = this.getFallbackLineAdvance();
+    if (containerBox.height < minHeight) {
+      const delta = minHeight - containerBox.height;
+      containerBox.y -= delta;
+      containerBox.height = minHeight;
+    }
 
     return {
       containerBox,

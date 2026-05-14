@@ -253,7 +253,8 @@ describe('MTextInputBox cursor/document index mapping', () => {
       position: { x: 10, y: 20 },
       width: 120,
       getFallbackLineAdvance: () => 16,
-      toLocalBox: proto.toLocalBox
+      toLocalBox: proto.toLocalBox,
+      computeEditorVerticalBounds: proto.computeEditorVerticalBounds
     };
 
     const object = {
@@ -298,6 +299,106 @@ describe('MTextInputBox cursor/document index mapping', () => {
       { y: 5, height: 10 },
       { y: -9, height: 10 }
     ]);
+    expect(result.containerBox).toEqual({
+      x: 0,
+      y: -14,
+      width: 120,
+      height: 24
+    });
+  });
+
+  test('vertical container ignores inflated object.box when layout lines/chars exist', () => {
+    const proto = MTextInputBox.prototype as unknown as Record<string, (...args: any[]) => any>;
+    const context = {
+      position: { x: 10, y: 20 },
+      width: 120,
+      getFallbackLineAdvance: () => 16,
+      toLocalBox: proto.toLocalBox,
+      computeEditorVerticalBounds: proto.computeEditorVerticalBounds
+    };
+
+    const object = {
+      // Taller than glyph + line union (extra space above first line).
+      box: new THREE.Box3(new THREE.Vector3(10, 10, 0), new THREE.Vector3(70, 40, 0)),
+      createLayoutData: () => ({
+        chars: [
+          {
+            type: 'CHAR',
+            box: new THREE.Box3(new THREE.Vector3(10, 20, 0), new THREE.Vector3(20, 30, 0)),
+            char: 'A',
+            children: []
+          },
+          {
+            type: 'CHAR',
+            box: new THREE.Box3(new THREE.Vector3(10, 6, 0), new THREE.Vector3(18, 16, 0)),
+            char: 'B',
+            children: []
+          }
+        ],
+        lines: [
+          { y: 25, height: 10, breakIndex: 1 },
+          { y: 11, height: 10, breakIndex: undefined }
+        ]
+      })
+    };
+
+    const extractBoxesFromRenderedObject = proto.extractBoxesFromRenderedObject as (
+      this: any,
+      obj: any
+    ) => { containerBox: { x: number; y: number; width: number; height: number } };
+
+    const result = extractBoxesFromRenderedObject.call(context, object);
+
+    expect(result.containerBox).toEqual({
+      x: 0,
+      y: -14,
+      width: 120,
+      height: 24
+    });
+  });
+
+  test('row bounds use glyph boxes when line strip is taller than glyphs on that row', () => {
+    const proto = MTextInputBox.prototype as unknown as Record<string, (...args: any[]) => any>;
+    const context = {
+      position: { x: 10, y: 20 },
+      width: 120,
+      getFallbackLineAdvance: () => 16,
+      toLocalBox: proto.toLocalBox,
+      computeEditorVerticalBounds: proto.computeEditorVerticalBounds
+    };
+
+    const object = {
+      box: new THREE.Box3(new THREE.Vector3(10, 14, 0), new THREE.Vector3(70, 30, 0)),
+      createLayoutData: () => ({
+        chars: [
+          {
+            type: 'CHAR',
+            box: new THREE.Box3(new THREE.Vector3(10, 20, 0), new THREE.Vector3(20, 30, 0)),
+            char: 'A',
+            children: []
+          },
+          {
+            type: 'CHAR',
+            box: new THREE.Box3(new THREE.Vector3(10, 6, 0), new THREE.Vector3(18, 16, 0)),
+            char: 'B',
+            children: []
+          }
+        ],
+        lines: [
+          // Same glyphs as the default test, but an oversized first-line strip (leading slot).
+          { y: 25, height: 40, breakIndex: 1 },
+          { y: 11, height: 10, breakIndex: undefined }
+        ]
+      })
+    };
+
+    const extractBoxesFromRenderedObject = proto.extractBoxesFromRenderedObject as (
+      this: any,
+      obj: any
+    ) => { containerBox: { x: number; y: number; width: number; height: number } };
+
+    const result = extractBoxesFromRenderedObject.call(context, object);
+
     expect(result.containerBox).toEqual({
       x: 0,
       y: -14,
