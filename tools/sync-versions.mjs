@@ -17,7 +17,7 @@ function buildRootVersionMap(rootPkg) {
     ...(rootPkg.dependencies ?? {}),
     ...(rootPkg.devDependencies ?? {}),
     ...(rootPkg.peerDependencies ?? {}),
-    ...(rootPkg.pnpm?.overrides ?? {}),
+    ...(rootPkg.pnpm?.overrides ?? {})
   };
 }
 
@@ -62,7 +62,7 @@ async function syncPackage(packageFilePath, rootVersionMap, workspacePackageName
     'dependencies',
     'devDependencies',
     'peerDependencies',
-    'optionalDependencies',
+    'optionalDependencies'
   ];
   let changed = false;
 
@@ -79,7 +79,9 @@ async function syncPackage(packageFilePath, rootVersionMap, workspacePackageName
 
         const rootVersion = rootVersionMap[name];
         if (!rootVersion) {
-          console.warn(`⚠️  ${pkg.name || packageFilePath}: no root version found for ${name} in ${depKey}`);
+          console.warn(
+            `⚠️  ${pkg.name || packageFilePath}: no root version found for ${name} in ${depKey}`
+          );
           continue;
         }
         newVersion = rootVersion;
@@ -117,7 +119,12 @@ async function syncPackage(packageFilePath, rootVersionMap, workspacePackageName
       if (!entry.isDirectory()) continue;
       const packageFilePath = path.join(packagesDir, entry.name, 'package.json');
       try {
-        const changed = await syncPackage(packageFilePath, rootVersionMap, workspacePackageNames, overrides);
+        const changed = await syncPackage(
+          packageFilePath,
+          rootVersionMap,
+          workspacePackageNames,
+          overrides
+        );
         if (changed) changedFiles.push(packageFilePath);
       } catch (error) {
         console.error(`❌ Failed to process ${packageFilePath}:`, error.message);

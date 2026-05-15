@@ -14,18 +14,13 @@ vi.mock('@mlightcad/text-box-cursor', () => {
 
 vi.mock('@mlightcad/mtext-renderer', () => {
   class UnifiedRenderer {}
+  class MTextContext {}
   return {
     getColorByIndex: () => 0xffffff,
     UnifiedRenderer,
-    MTextAttachmentPoint: { TopLeft: 1 },
-    MTextFlowDirection: { LEFT_TO_RIGHT: 1 }
-  };
-});
-
-vi.mock('@mlightcad/mtext-renderer', () => {
-  class MTextContext {}
-  return {
     MTextContext,
+    MTextAttachmentPoint: { TopLeft: 1 },
+    MTextFlowDirection: { LEFT_TO_RIGHT: 1 },
     MTextLineAlignment: {
       TOP: 1,
       MIDDLE: 2,
@@ -307,6 +302,43 @@ describe('MTextInputBox cursor/document index mapping', () => {
     });
   });
 
+  test('MTEXT column box shifts left for top-right attachment (DXF 71)', () => {
+    const proto = MTextInputBox.prototype as unknown as Record<string, (...args: any[]) => any>;
+    const context = {
+      position: { x: 200, y: 20 },
+      width: 120,
+      editorAttachmentPoint: 3,
+      getFallbackLineAdvance: () => 16,
+      toLocalBox: proto.toLocalBox,
+      computeEditorVerticalBounds: proto.computeEditorVerticalBounds
+    };
+
+    const object = {
+      box: new THREE.Box3(new THREE.Vector3(100, 14, 0), new THREE.Vector3(200, 30, 0)),
+      createLayoutData: () => ({
+        chars: [
+          {
+            type: 'CHAR',
+            box: new THREE.Box3(new THREE.Vector3(190, 20, 0), new THREE.Vector3(200, 30, 0)),
+            char: 'A',
+            children: []
+          }
+        ],
+        lines: [{ y: 25, height: 10, breakIndex: undefined }]
+      })
+    };
+
+    const extractBoxesFromRenderedObject = proto.extractBoxesFromRenderedObject as (
+      this: any,
+      obj: any
+    ) => { containerBox: { x: number; y: number; width: number; height: number } };
+
+    const result = extractBoxesFromRenderedObject.call(context, object);
+
+    expect(result.containerBox.x).toBe(-120);
+    expect(result.containerBox.width).toBe(120);
+  });
+
   test('vertical container ignores inflated object.box when layout lines/chars exist', () => {
     const proto = MTextInputBox.prototype as unknown as Record<string, (...args: any[]) => any>;
     const context = {
@@ -505,6 +537,50 @@ describe('MTextInputBox cursor/document index mapping', () => {
 
     expect(result.position).toEqual({ x: 0, y: -12 });
     expect(result.height).toBeCloseTo(24);
+  });
+
+  test('unionLayoutContainerWithCursorLines extends bounds for trailing empty row', () => {
+    const proto = MTextInputBox.prototype as unknown as Record<string, (...args: any[]) => any>;
+    const unionLayoutContainerWithCursorLines = proto.unionLayoutContainerWithCursorLines as (
+      this: any,
+      container: { x: number; y: number; width: number; height: number }
+    ) => { x: number; y: number; width: number; height: number };
+
+    const context = {
+      cursorLogic: {
+        getLines: () => [
+          { startIndex: 0, endIndex: 0, charCount: 1, y: 0, height: 10 },
+          { startIndex: 1, endIndex: 0, charCount: 0, y: -15, height: 10 }
+        ]
+      }
+    };
+
+    const container = { x: 0, y: -5, width: 120, height: 10 };
+    const result = unionLayoutContainerWithCursorLines.call(context, container);
+
+    expect(result).toEqual({ x: 0, y: -20, width: 120, height: 25 });
+  });
+
+  test('unionLayoutContainerWithCursorLines ignores non-empty lines (oversized strips)', () => {
+    const proto = MTextInputBox.prototype as unknown as Record<string, (...args: any[]) => any>;
+    const unionLayoutContainerWithCursorLines = proto.unionLayoutContainerWithCursorLines as (
+      this: any,
+      container: { x: number; y: number; width: number; height: number }
+    ) => { x: number; y: number; width: number; height: number };
+
+    const context = {
+      cursorLogic: {
+        getLines: () => [
+          { startIndex: 0, endIndex: 0, charCount: 1, y: 0, height: 100 },
+          { startIndex: 1, endIndex: 0, charCount: 0, y: -55, height: 10 }
+        ]
+      }
+    };
+
+    const container = { x: 0, y: -5, width: 120, height: 10 };
+    const result = unionLayoutContainerWithCursorLines.call(context, container);
+
+    expect(result).toEqual({ x: 0, y: -60, width: 120, height: 65 });
   });
 
   test('handleKeyDown closes editor on Escape', () => {

@@ -1,6 +1,7 @@
 import type { Box, CursorStyle, SelectionStyle } from '@mlightcad/text-box-cursor';
 import type {
   ColorSettings,
+  MTextAttachmentPoint,
   MTextColor,
   MTextParagraphAlignment,
   TextStyle
@@ -194,6 +195,10 @@ export interface MTextInputBoxOptions {
   width: number;
   /** Optional world-space origin of the editor container. */
   position?: THREE.Vector3;
+  /**
+   * Initial MTEXT attachment (DXF group 71). Defaults to top-left when omitted.
+   */
+  initialAttachmentPoint?: MTextAttachmentPoint;
   /**
    * Default text style passed to `@mlightcad/mtext-renderer`.
    *

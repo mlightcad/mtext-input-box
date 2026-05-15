@@ -51,6 +51,29 @@ type HistorySnapshot = {
 };
 
 /**
+ * Local X of the MTEXT column's left edge relative to the insertion point (DXF 71),
+ * matching {@link MText.calculateAnchorPoint} / `mtext-renderer` frame semantics.
+ * Uses numeric codes so unit tests can partially mock `@mlightcad/mtext-renderer`.
+ */
+function attachmentColumnMinLocal(
+  width: number,
+  attachment: MTextAttachmentPoint | undefined
+): number {
+  const w = Math.max(1, width);
+  const a = attachment as number | undefined;
+  // Left column: 1 TL, 4 ML, 7 BL, 10 baseline-left
+  if (a === undefined || a === 1 || a === 4 || a === 7 || a === 10) return 0;
+  // Center column: 2 TC, 5 MC, 8 BC, 11 baseline-center
+  if (a === 2 || a === 5 || a === 8 || a === 11) return -w / 2;
+  // Right column: 3 TR, 6 MR, 9 BR, 12 baseline-right
+  if (a === 3 || a === 6 || a === 9 || a === 12) return -w;
+  return 0;
+}
+
+/** Marks MTEXT roots added by {@link MTextInputBox} so stray scene objects can be scavenged. */
+const MTEXT_INPUT_BOX_SCENE_ROOT_KEY = '__mlightcadMTextInputBoxSceneRoot';
+
+/**
  * Three.js based MText editor component with core text editing interaction.
  */
 export class MTextInputBox {
@@ -294,6 +317,9 @@ export class MTextInputBox {
     this.colorSettings = options.colorSettings;
     this.width = Math.max(1, options.width);
     this.position = options.position?.clone() ?? new THREE.Vector3(0, 0, 0);
+    if (options.initialAttachmentPoint !== undefined) {
+      this.editorAttachmentPoint = options.initialAttachmentPoint;
+    }
     this.enableWordWrap = options.enableWordWrap ?? true;
 
     const textStyle = options.textStyle ?? MTextInputBox.DEFAULT_TEXT_STYLE;
@@ -751,6 +777,50 @@ export class MTextInputBox {
   public setAttachmentPoint(attachmentPoint: string): void {
     const next = this.mapRibbonAttachmentCode(attachmentPoint);
     if (next === undefined || next === this.editorAttachmentPoint) return;
+
+    // Keep the on-screen text frame fixed: DXF insertion point is the selected
+    // attachment location on the bounding box, so changing attachment must move
+    // `position` by the delta between the old and new anchor on the same box.
+    //
+    // Do not gate this on `rendererReady`: while fonts load, `relayout()` still
+    // fills `layoutContainer` from the fallback layout. Skipping the move here
+    // left `position` at the top-left anchor even after the user chose middle
+    // center, so committed MTEXT used the wrong insertion vs attachment (DXF 71).
+    if (
+      Number.isFinite(this.layoutContainer.width) &&
+      Number.isFinite(this.layoutContainer.height)
+    ) {
+      const left = this.position.x + this.layoutContainer.x;
+      const right = left + this.layoutContainer.width;
+      const bottom = this.position.y + this.layoutContainer.y;
+      const top = bottom + this.layoutContainer.height;
+      if (
+        Number.isFinite(left) &&
+        Number.isFinite(right) &&
+        Number.isFinite(bottom) &&
+        Number.isFinite(top) &&
+        right >= left - 1e-9 &&
+        top >= bottom - 1e-9
+      ) {
+        const oldAnchor = this.computeAttachmentAnchorOnBounds(
+          left,
+          right,
+          bottom,
+          top,
+          this.editorAttachmentPoint
+        );
+        const newAnchor = this.computeAttachmentAnchorOnBounds(left, right, bottom, top, next);
+        this.position.x += newAnchor.x - oldAnchor.x;
+        this.position.y += newAnchor.y - oldAnchor.y;
+        this.cursorRenderer.setViewTransform({
+          x: this.position.x,
+          y: this.position.y,
+          scaleX: 1,
+          scaleY: 1
+        });
+      }
+    }
+
     this.editorAttachmentPoint = next;
     this.relayout();
     this.emit('change');
@@ -759,6 +829,11 @@ export class MTextInputBox {
   /** Returns the current attachment as a two-letter ribbon / DXF-style code. */
   public getAttachmentPointCode(): string {
     return this.attachmentPointToRibbonCode(this.editorAttachmentPoint);
+  }
+
+  /** Returns the current attachment as an {@link MTextAttachmentPoint} value (DXF 71). */
+  public getMTextAttachmentPoint(): MTextAttachmentPoint {
+    return this.editorAttachmentPoint;
   }
 
   /** Toggles selected alphabetic text between upper and lower case. */
@@ -1370,6 +1445,10 @@ export class MTextInputBox {
       const style = this.createTextStyle();
       const colorSettings = this.resolveRenderColorSettings();
       const object = this.mtextRenderer.syncRenderMText(mtextData, style, colorSettings);
+      // `MText.syncDraw()` appends a fresh layout group without clearing prior children.
+      // If the renderer ever reuses one root for multiple draws, prune stale roots so
+      // attachment / justify changes cannot leave duplicate glyph trees in the scene.
+      this.pruneExtraMTextLayoutRoots(object);
 
       this.replaceRenderedObject(object);
 
@@ -1466,6 +1545,60 @@ export class MTextInputBox {
     }
 
     this.syncStateFromCursor();
+
+    // Renderer-driven vertical bounds can omit a trailing empty row when a single
+    // inflated line strip overlaps all glyphs (we then keep only glyph extents).
+    // Cursor geometry for empty rows still carries those rows (break fallbacks), so
+    // union only empty lines — non-empty rows are already covered by glyph bounds,
+    // and their LineInfo can still reflect oversized strips (reintroducing leading).
+    const expanded = this.unionLayoutContainerWithCursorLines(this.layoutContainer);
+    if (
+      Math.abs(expanded.y - this.layoutContainer.y) > 1e-6 ||
+      Math.abs(expanded.height - this.layoutContainer.height) > 1e-6
+    ) {
+      this.layoutContainer = expanded;
+      this.latestCursorLayoutData.containerBox = { ...this.layoutContainer };
+      this.cursorLogic.updateData(this.layoutContainer, charBoxes, lineBreakIndices, lineLayouts);
+      this.cursorLogic.moveTo(nextIndex, pendingLineHint);
+      if (this.selectionStart !== this.selectionEnd) {
+        this.cursorLogic.setSelection(this.selectionStart, this.selectionEnd);
+      } else {
+        this.cursorLogic.clearSelection();
+      }
+      this.syncStateFromCursor();
+    }
+  }
+
+  /**
+   * Extends {@link layoutContainer} vertically so empty logical rows (no glyphs)
+   * remain inside the chrome bounds. Intentionally ignores non-empty rows: their
+   * `LineInfo` may still use inflated renderer line strips, while
+   * {@link computeEditorVerticalBounds} already tightened using glyph boxes.
+   */
+  private unionLayoutContainerWithCursorLines(container: Box): Box {
+    const lines = this.cursorLogic.getLines();
+    if (lines.length === 0) return container;
+
+    let low = container.y;
+    let high = container.y + container.height;
+
+    for (const line of lines) {
+      if (line.charCount !== 0) continue;
+      const lineLo = line.y - line.height / 2;
+      const lineHi = line.y + line.height / 2;
+      if (Number.isFinite(lineLo)) low = Math.min(low, lineLo);
+      if (Number.isFinite(lineHi)) high = Math.max(high, lineHi);
+    }
+
+    if (!Number.isFinite(low) || !Number.isFinite(high) || high < low) {
+      return container;
+    }
+
+    return {
+      ...container,
+      y: low,
+      height: high - low
+    };
   }
 
   /**
@@ -1593,13 +1726,11 @@ export class MTextInputBox {
     );
 
     const containerBox = {
-      x: local.x,
+      x: attachmentColumnMinLocal(this.width, this.editorAttachmentPoint),
       y: containerTop,
-      width: local.width,
+      width: Math.max(1, this.width),
       height: Math.max(0, containerBottom - containerTop)
     };
-    containerBox.x = 0;
-    containerBox.width = this.width;
     const minHeight = this.getFallbackLineAdvance();
     if (containerBox.height < minHeight) {
       const delta = minHeight - containerBox.height;
@@ -1691,7 +1822,7 @@ export class MTextInputBox {
 
     return {
       containerBox: {
-        x: 0,
+        x: attachmentColumnMinLocal(this.width, this.editorAttachmentPoint),
         y: minY,
         width: this.width,
         height: Math.max(1, -minY)
@@ -1759,9 +1890,29 @@ export class MTextInputBox {
 
   private replaceRenderedObject(object: MTextObject): void {
     this.disposeRenderedObject(this.renderedObject);
+    this.removeStrayInputBoxSceneRootsExcept(object);
     this.forceVisibleMaterialState(object);
+    (object as unknown as THREE.Object3D).userData[MTEXT_INPUT_BOX_SCENE_ROOT_KEY] = this;
     this.renderedObject = object;
     this.scene.add(object);
+  }
+
+  /**
+   * Removes any previous MTEXT scene roots tagged for this input box. Defensive
+   * cleanup when a prior root was not fully detached before the next relayout.
+   */
+  private removeStrayInputBoxSceneRootsExcept(keep: MTextObject): void {
+    const keepObj = keep as unknown as THREE.Object3D;
+    for (let i = this.scene.children.length - 1; i >= 0; i--) {
+      const ch = this.scene.children[i];
+      if (!ch || ch === keepObj) continue;
+      const owner = (ch.userData as Record<string, unknown>)[MTEXT_INPUT_BOX_SCENE_ROOT_KEY];
+      if (owner === this) {
+        this.scene.remove(ch);
+        this.disposeMTextRootResources(ch as MTextObject);
+        delete (ch.userData as Record<string, unknown>)[MTEXT_INPUT_BOX_SCENE_ROOT_KEY];
+      }
+    }
   }
 
   private forceVisibleMaterialState(object: MTextObject): void {
@@ -1795,17 +1946,8 @@ export class MTextInputBox {
     });
   }
 
-  private disposeRenderedObject(object: MTextObject | null): void {
-    if (!object) return;
-    object.removeFromParent();
-
-    const withDispose = object as MTextObject & { dispose?: () => void };
-    if (typeof withDispose.dispose === 'function') {
-      withDispose.dispose();
-      return;
-    }
-
-    object.traverse((child: THREE.Object3D) => {
+  private disposeDetachedThreeSubtree(root: THREE.Object3D): void {
+    root.traverse((child: THREE.Object3D) => {
       const mesh = child as THREE.Mesh;
       if (mesh.geometry) {
         mesh.geometry.dispose();
@@ -1819,6 +1961,36 @@ export class MTextInputBox {
         material.dispose();
       }
     });
+  }
+
+  /**
+   * Keeps a single layout root on the MTEXT object. {@link MText.syncDraw} only calls
+   * `add()` for the new layout; multiple draws on the same instance would otherwise
+   * stack several full copies of the text (e.g. after attachment-point changes).
+   */
+  private pruneExtraMTextLayoutRoots(object: MTextObject): void {
+    while (object.children.length > 1) {
+      const stale = object.children[0];
+      if (!stale) break;
+      object.remove(stale);
+      this.disposeDetachedThreeSubtree(stale);
+    }
+  }
+
+  private disposeMTextRootResources(object: MTextObject): void {
+    const withDispose = object as MTextObject & { dispose?: () => void };
+    if (typeof withDispose.dispose === 'function') {
+      withDispose.dispose();
+      return;
+    }
+    this.disposeDetachedThreeSubtree(object);
+  }
+
+  private disposeRenderedObject(object: MTextObject | null): void {
+    if (!object) return;
+    object.removeFromParent();
+    delete (object as unknown as THREE.Object3D).userData[MTEXT_INPUT_BOX_SCENE_ROOT_KEY];
+    this.disposeMTextRootResources(object);
   }
 
   private isExplicitAci(aci: number | null): aci is number {
@@ -2829,6 +3001,47 @@ export class MTextInputBox {
     }
 
     return new MTextDocument(normalizedAst);
+  }
+
+  /**
+   * World-space point on the layout bounds that matches the given MTEXT
+   * attachment (DXF 71), using the same box convention as {@link updateBoundingBoxGeometry}.
+   */
+  private computeAttachmentAnchorOnBounds(
+    left: number,
+    right: number,
+    bottom: number,
+    top: number,
+    point: MTextAttachmentPoint
+  ): THREE.Vector3 {
+    const midX = (left + right) * 0.5;
+    const midY = (bottom + top) * 0.5;
+    const z = this.position.z;
+    switch (point) {
+      case MTextAttachmentPoint.TopLeft:
+        return new THREE.Vector3(left, top, z);
+      case MTextAttachmentPoint.TopCenter:
+        return new THREE.Vector3(midX, top, z);
+      case MTextAttachmentPoint.TopRight:
+        return new THREE.Vector3(right, top, z);
+      case MTextAttachmentPoint.MiddleLeft:
+        return new THREE.Vector3(left, midY, z);
+      case MTextAttachmentPoint.MiddleCenter:
+        return new THREE.Vector3(midX, midY, z);
+      case MTextAttachmentPoint.MiddleRight:
+        return new THREE.Vector3(right, midY, z);
+      case MTextAttachmentPoint.BottomLeft:
+      case MTextAttachmentPoint.BaselineLeft:
+        return new THREE.Vector3(left, bottom, z);
+      case MTextAttachmentPoint.BottomCenter:
+      case MTextAttachmentPoint.BaselineCenter:
+        return new THREE.Vector3(midX, bottom, z);
+      case MTextAttachmentPoint.BottomRight:
+      case MTextAttachmentPoint.BaselineRight:
+        return new THREE.Vector3(right, bottom, z);
+      default:
+        return new THREE.Vector3(left, top, z);
+    }
   }
 
   private mapRibbonParagraphAlignment(alignment: string): MTextParagraphAlignment | undefined {
