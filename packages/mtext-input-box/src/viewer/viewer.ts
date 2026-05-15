@@ -51,6 +51,26 @@ type HistorySnapshot = {
 };
 
 /**
+ * Local X of the MTEXT column's left edge relative to the insertion point (DXF 71),
+ * matching {@link MText.calculateAnchorPoint} / `mtext-renderer` frame semantics.
+ * Uses numeric codes so unit tests can partially mock `@mlightcad/mtext-renderer`.
+ */
+function attachmentColumnMinLocal(
+  width: number,
+  attachment: MTextAttachmentPoint | undefined
+): number {
+  const w = Math.max(1, width);
+  const a = attachment as number | undefined;
+  // Left column: 1 TL, 4 ML, 7 BL, 10 baseline-left
+  if (a === undefined || a === 1 || a === 4 || a === 7 || a === 10) return 0;
+  // Center column: 2 TC, 5 MC, 8 BC, 11 baseline-center
+  if (a === 2 || a === 5 || a === 8 || a === 11) return -w / 2;
+  // Right column: 3 TR, 6 MR, 9 BR, 12 baseline-right
+  if (a === 3 || a === 6 || a === 9 || a === 12) return -w;
+  return 0;
+}
+
+/**
  * Three.js based MText editor component with core text editing interaction.
  */
 export class MTextInputBox {
@@ -294,6 +314,9 @@ export class MTextInputBox {
     this.colorSettings = options.colorSettings;
     this.width = Math.max(1, options.width);
     this.position = options.position?.clone() ?? new THREE.Vector3(0, 0, 0);
+    if (options.initialAttachmentPoint !== undefined) {
+      this.editorAttachmentPoint = options.initialAttachmentPoint;
+    }
     this.enableWordWrap = options.enableWordWrap ?? true;
 
     const textStyle = options.textStyle ?? MTextInputBox.DEFAULT_TEXT_STYLE;
@@ -751,6 +774,42 @@ export class MTextInputBox {
   public setAttachmentPoint(attachmentPoint: string): void {
     const next = this.mapRibbonAttachmentCode(attachmentPoint);
     if (next === undefined || next === this.editorAttachmentPoint) return;
+
+    // Keep the on-screen text frame fixed: DXF insertion point is the selected
+    // attachment location on the bounding box, so changing attachment must move
+    // `position` by the delta between the old and new anchor on the same box.
+    if (this.rendererReady && Number.isFinite(this.layoutContainer.width)) {
+      const left = this.position.x + this.layoutContainer.x;
+      const right = left + this.layoutContainer.width;
+      const bottom = this.position.y + this.layoutContainer.y;
+      const top = bottom + this.layoutContainer.height;
+      if (
+        Number.isFinite(left) &&
+        Number.isFinite(right) &&
+        Number.isFinite(bottom) &&
+        Number.isFinite(top) &&
+        right >= left - 1e-9 &&
+        top >= bottom - 1e-9
+      ) {
+        const oldAnchor = this.computeAttachmentAnchorOnBounds(
+          left,
+          right,
+          bottom,
+          top,
+          this.editorAttachmentPoint
+        );
+        const newAnchor = this.computeAttachmentAnchorOnBounds(left, right, bottom, top, next);
+        this.position.x += newAnchor.x - oldAnchor.x;
+        this.position.y += newAnchor.y - oldAnchor.y;
+        this.cursorRenderer.setViewTransform({
+          x: this.position.x,
+          y: this.position.y,
+          scaleX: 1,
+          scaleY: 1
+        });
+      }
+    }
+
     this.editorAttachmentPoint = next;
     this.relayout();
     this.emit('change');
@@ -759,6 +818,11 @@ export class MTextInputBox {
   /** Returns the current attachment as a two-letter ribbon / DXF-style code. */
   public getAttachmentPointCode(): string {
     return this.attachmentPointToRibbonCode(this.editorAttachmentPoint);
+  }
+
+  /** Returns the current attachment as an {@link MTextAttachmentPoint} value (DXF 71). */
+  public getMTextAttachmentPoint(): MTextAttachmentPoint {
+    return this.editorAttachmentPoint;
   }
 
   /** Toggles selected alphabetic text between upper and lower case. */
@@ -1466,6 +1530,60 @@ export class MTextInputBox {
     }
 
     this.syncStateFromCursor();
+
+    // Renderer-driven vertical bounds can omit a trailing empty row when a single
+    // inflated line strip overlaps all glyphs (we then keep only glyph extents).
+    // Cursor geometry for empty rows still carries those rows (break fallbacks), so
+    // union only empty lines — non-empty rows are already covered by glyph bounds,
+    // and their LineInfo can still reflect oversized strips (reintroducing leading).
+    const expanded = this.unionLayoutContainerWithCursorLines(this.layoutContainer);
+    if (
+      Math.abs(expanded.y - this.layoutContainer.y) > 1e-6 ||
+      Math.abs(expanded.height - this.layoutContainer.height) > 1e-6
+    ) {
+      this.layoutContainer = expanded;
+      this.latestCursorLayoutData.containerBox = { ...this.layoutContainer };
+      this.cursorLogic.updateData(this.layoutContainer, charBoxes, lineBreakIndices, lineLayouts);
+      this.cursorLogic.moveTo(nextIndex, pendingLineHint);
+      if (this.selectionStart !== this.selectionEnd) {
+        this.cursorLogic.setSelection(this.selectionStart, this.selectionEnd);
+      } else {
+        this.cursorLogic.clearSelection();
+      }
+      this.syncStateFromCursor();
+    }
+  }
+
+  /**
+   * Extends {@link layoutContainer} vertically so empty logical rows (no glyphs)
+   * remain inside the chrome bounds. Intentionally ignores non-empty rows: their
+   * `LineInfo` may still use inflated renderer line strips, while
+   * {@link computeEditorVerticalBounds} already tightened using glyph boxes.
+   */
+  private unionLayoutContainerWithCursorLines(container: Box): Box {
+    const lines = this.cursorLogic.getLines();
+    if (lines.length === 0) return container;
+
+    let low = container.y;
+    let high = container.y + container.height;
+
+    for (const line of lines) {
+      if (line.charCount !== 0) continue;
+      const lineLo = line.y - line.height / 2;
+      const lineHi = line.y + line.height / 2;
+      if (Number.isFinite(lineLo)) low = Math.min(low, lineLo);
+      if (Number.isFinite(lineHi)) high = Math.max(high, lineHi);
+    }
+
+    if (!Number.isFinite(low) || !Number.isFinite(high) || high < low) {
+      return container;
+    }
+
+    return {
+      ...container,
+      y: low,
+      height: high - low
+    };
   }
 
   /**
@@ -1593,13 +1711,11 @@ export class MTextInputBox {
     );
 
     const containerBox = {
-      x: local.x,
+      x: attachmentColumnMinLocal(this.width, this.editorAttachmentPoint),
       y: containerTop,
-      width: local.width,
+      width: Math.max(1, this.width),
       height: Math.max(0, containerBottom - containerTop)
     };
-    containerBox.x = 0;
-    containerBox.width = this.width;
     const minHeight = this.getFallbackLineAdvance();
     if (containerBox.height < minHeight) {
       const delta = minHeight - containerBox.height;
@@ -1691,7 +1807,7 @@ export class MTextInputBox {
 
     return {
       containerBox: {
-        x: 0,
+        x: attachmentColumnMinLocal(this.width, this.editorAttachmentPoint),
         y: minY,
         width: this.width,
         height: Math.max(1, -minY)
@@ -2829,6 +2945,47 @@ export class MTextInputBox {
     }
 
     return new MTextDocument(normalizedAst);
+  }
+
+  /**
+   * World-space point on the layout bounds that matches the given MTEXT
+   * attachment (DXF 71), using the same box convention as {@link updateBoundingBoxGeometry}.
+   */
+  private computeAttachmentAnchorOnBounds(
+    left: number,
+    right: number,
+    bottom: number,
+    top: number,
+    point: MTextAttachmentPoint
+  ): THREE.Vector3 {
+    const midX = (left + right) * 0.5;
+    const midY = (bottom + top) * 0.5;
+    const z = this.position.z;
+    switch (point) {
+      case MTextAttachmentPoint.TopLeft:
+        return new THREE.Vector3(left, top, z);
+      case MTextAttachmentPoint.TopCenter:
+        return new THREE.Vector3(midX, top, z);
+      case MTextAttachmentPoint.TopRight:
+        return new THREE.Vector3(right, top, z);
+      case MTextAttachmentPoint.MiddleLeft:
+        return new THREE.Vector3(left, midY, z);
+      case MTextAttachmentPoint.MiddleCenter:
+        return new THREE.Vector3(midX, midY, z);
+      case MTextAttachmentPoint.MiddleRight:
+        return new THREE.Vector3(right, midY, z);
+      case MTextAttachmentPoint.BottomLeft:
+      case MTextAttachmentPoint.BaselineLeft:
+        return new THREE.Vector3(left, bottom, z);
+      case MTextAttachmentPoint.BottomCenter:
+      case MTextAttachmentPoint.BaselineCenter:
+        return new THREE.Vector3(midX, bottom, z);
+      case MTextAttachmentPoint.BottomRight:
+      case MTextAttachmentPoint.BaselineRight:
+        return new THREE.Vector3(right, bottom, z);
+      default:
+        return new THREE.Vector3(left, top, z);
+    }
   }
 
   private mapRibbonParagraphAlignment(alignment: string): MTextParagraphAlignment | undefined {
