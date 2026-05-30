@@ -14,7 +14,7 @@
       "vue-demi"
     ],
     "overrides": {
-      "@mlightcad/mtext-renderer": "^0.10.14"
+      "@mlightcad/mtext-renderer": "^0.10.16"
     }
   },
   "scripts": {
