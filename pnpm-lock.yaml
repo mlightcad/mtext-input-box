@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@mlightcad/mtext-renderer': ^0.10.16
+  '@mlightcad/mtext-renderer': ^0.11.0
 
 importers:
 
@@ -58,8 +58,8 @@ importers:
         specifier: workspace:*
         version: link:../mtext-input-box
       '@mlightcad/mtext-renderer':
-        specifier: ^0.10.16
-        version: 0.10.16(three@0.172.0)
+        specifier: ^0.11.0
+        version: 0.11.0(three@0.172.0)
       diff:
         specifier: ^7.0.0
         version: 7.0.0
@@ -153,8 +153,8 @@ importers:
   packages/mtext-input-box:
     dependencies:
       '@mlightcad/mtext-renderer':
-        specifier: ^0.10.16
-        version: 0.10.16(three@0.172.0)
+        specifier: ^0.11.0
+        version: 0.11.0(three@0.172.0)
       '@mlightcad/text-box-cursor':
         specifier: workspace:*
         version: link:../text-box-cursor
@@ -589,13 +589,13 @@ packages:
   '@mlightcad/mtext-parser@1.4.1':
     resolution: {integrity: sha512-PU7D5H/k25vZpTERabpdn5HVAs8+SBNRqgi08wRPiplxTE1eB/zBZRNRrSwHqyWx6xMeQmZ9mhh9DPNpte3gYQ==}
 
-  '@mlightcad/mtext-renderer@0.10.16':
-    resolution: {integrity: sha512-mCDvR6fvIvK4ZxkK+P8WbEwmsJMVh3Z+AiONbPB44pE5x7ZZGFDIGr/8zLCNPZFZbFqwCkNmCeWc99r3bR6GKw==}
+  '@mlightcad/mtext-renderer@0.11.0':
+    resolution: {integrity: sha512-93jECtXH+J4F56Ifl3cTZUvL+AdZGVVuSi5c5hvpdWkRBFjIkonznyIVq5974Gx5uthxpM7MnILz1ZWSNrdjig==}
     peerDependencies:
       three: ^0.172.0
 
-  '@mlightcad/shx-parser@1.3.2':
-    resolution: {integrity: sha512-j84hqbWOVMDuepLEjVsYvxeiCXOVxHyJhl4gM4HtgXZ6ChgTLsuSnqs2bNOt2SwriTvFOsv3QLsOu2iJh857JA==}
+  '@mlightcad/shx-parser@1.3.4':
+    resolution: {integrity: sha512-y0clXQIBslAOwTMFtUnQqzZqhtD5lxUCiJA7lYTYvzO2dzBtsd2LVhUYdyA6R6DwjygOzjegXcP/4oCIsDiZhg==}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -1486,9 +1486,8 @@ packages:
   normalize-wheel-es@1.2.0:
     resolution: {integrity: sha512-Wj7+EJQ8mSuXr2iWfnujrimU35R2W4FAErEyTmJoJ7ucwTn2hOUSsRehMb5RSYkxXGTM7Y9QpvPmp++w5ftoJw==}
 
-  opentype.js@1.3.4:
-    resolution: {integrity: sha512-d2JE9RP/6uagpQAVtJoF0pJJA/fgai89Cc50Yp0EJHk+eLp6QQ7gBoblsnubRULNY132I0J1QKMJ+JTbMqz4sw==}
-    engines: {node: '>= 8.0.0'}
+  opentype.js@2.0.0:
+    resolution: {integrity: sha512-kCyjv6xdDY1W/jLWZ/L3QhhTlKUqDZMQ5+Jdlw12b3dXkKNpYBqqlMMj0YDQPShWFTMwgZI1hG14kN3XUDSg/A==}
     hasBin: true
 
   optionator@0.9.4:
@@ -1690,9 +1689,6 @@ packages:
     resolution: {integrity: sha512-HnLOCR3vjcY8beoNLtcjZ5/nxn2afmME6lhrDrebokqMap+XbeW8n9TXpPDOqdGK5qcI3oT0GKTW6wC7EMiVqA==}
     engines: {node: '>=12'}
 
-  string.prototype.codepointat@0.2.1:
-    resolution: {integrity: sha512-2cBVCj6I4IOvEnjgO/hWqXjqBGsY+zwPmHl12Srk9IXSZ56Jwwmy+66XO5Iut/oQVR7t5ihYdLB0GMa4alEUcg==}
-
   strip-ansi@6.0.1:
     resolution: {integrity: sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==}
     engines: {node: '>=8'}
@@ -1726,9 +1722,6 @@ packages:
 
   three@0.172.0:
     resolution: {integrity: sha512-6HMgMlzU97MsV7D/tY8Va38b83kz8YJX+BefKjspMNAv0Vx6dxMogHOrnRl/sbMIs3BPUKijPqDqJ/+UwJbIow==}
-
-  tiny-inflate@1.0.3:
-    resolution: {integrity: sha512-pkY1fj1cKHb2seWDy0B16HeWyczlJA9/WW3u3c4z/NiWDsO3DOU5D7nhTLE9CF0yXv/QZFY7sEJmj24dK+Rrqw==}
 
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
@@ -2281,16 +2274,16 @@ snapshots:
 
   '@mlightcad/mtext-parser@1.4.1': {}
 
-  '@mlightcad/mtext-renderer@0.10.16(three@0.172.0)':
+  '@mlightcad/mtext-renderer@0.11.0(three@0.172.0)':
     dependencies:
       '@mlightcad/mtext-parser': 1.4.1
-      '@mlightcad/shx-parser': 1.3.2
+      '@mlightcad/shx-parser': 1.3.4
       iconv-lite: 0.7.2
       idb: 8.0.3
-      opentype.js: 1.3.4
+      opentype.js: 2.0.0
       three: 0.172.0
 
-  '@mlightcad/shx-parser@1.3.2': {}
+  '@mlightcad/shx-parser@1.3.4': {}
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:
@@ -3213,10 +3206,7 @@ snapshots:
 
   normalize-wheel-es@1.2.0: {}
 
-  opentype.js@1.3.4:
-    dependencies:
-      string.prototype.codepointat: 0.2.1
-      tiny-inflate: 1.0.3
+  opentype.js@2.0.0: {}
 
   optionator@0.9.4:
     dependencies:
@@ -3403,8 +3393,6 @@ snapshots:
       emoji-regex: 9.2.2
       strip-ansi: 7.1.2
 
-  string.prototype.codepointat@0.2.1: {}
-
   strip-ansi@6.0.1:
     dependencies:
       ansi-regex: 5.0.1
@@ -3434,8 +3422,6 @@ snapshots:
       minimatch: 9.0.5
 
   three@0.172.0: {}
-
-  tiny-inflate@1.0.3: {}
 
   tinybench@2.9.0: {}
 
