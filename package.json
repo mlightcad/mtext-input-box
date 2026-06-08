@@ -6,17 +6,6 @@
     "node": ">=24",
     "pnpm": ">=10"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@parcel/watcher",
-      "esbuild",
-      "nx",
-      "vue-demi"
-    ],
-    "overrides": {
-      "@mlightcad/mtext-renderer": "^0.11.0"
-    }
-  },
   "scripts": {
     "build": "pnpm --filter @mlightcad/text-box-cursor build && pnpm --filter @mlightcad/mtext-input-box build && pnpm --filter @mlightcad/demo-canvas-cursor build && pnpm --filter @mlightcad/demo-three-cursor build && pnpm --filter @mlightcad/demo-mtext-input-box build",
     "dev:canvas": "pnpm --filter @mlightcad/demo-canvas-cursor dev",
