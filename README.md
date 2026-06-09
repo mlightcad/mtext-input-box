@@ -51,3 +51,11 @@ pnpm publish:mtext
 ```
 
 `publish:mtext` builds the workspace and publishes `@mlightcad/text-box-cursor` and `@mlightcad/mtext-input-box`.
+
+## Contributing
+
+Contributions are welcome! Please open issues or pull requests for bug fixes, new features, or suggestions. For bug reports, providing a link to the problematic drawing will help in reproducing and fixing the issue.
+
+## License
+
+[MIT](LICENSE)
