@@ -20,10 +20,10 @@ Three.js-based MTEXT editor component with built-in IME bridge, cursor/selection
 ## Install
 
 ```bash
-pnpm add @mlightcad/mtext-input-box three @mlightcad/mtext-parser @mlightcad/mtext-renderer
+pnpm add @mlightcad/mtext-input-box three @mlightcad/mtext-renderer
 ```
 
-`@mlightcad/mtext-parser` and `@mlightcad/mtext-renderer` are peer dependencies of `@mlightcad/mtext-input-box`, so your app should install them directly.
+`three` and `@mlightcad/mtext-renderer` are peer dependencies of `@mlightcad/mtext-input-box`, so your app should install them directly.
 
 ## Basic Usage
 
