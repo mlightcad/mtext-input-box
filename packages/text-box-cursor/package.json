@@ -2,6 +2,11 @@
   "name": "@mlightcad/text-box-cursor",
   "version": "0.1.1",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mlightcad/mtext-input-box.git",
+    "directory": "packages/text-box-cursor"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

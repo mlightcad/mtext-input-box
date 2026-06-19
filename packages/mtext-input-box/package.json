@@ -2,6 +2,11 @@
   "name": "@mlightcad/mtext-input-box",
   "version": "0.2.19",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mlightcad/mtext-input-box.git",
+    "directory": "packages/mtext-input-box"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
