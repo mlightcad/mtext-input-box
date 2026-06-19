@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@mlightcad/mtext-renderer': ^0.11.4
+  '@mlightcad/mtext-renderer': ^0.11.5
   three: ^0.172.0
 
 importers:
@@ -59,8 +59,8 @@ importers:
         specifier: workspace:*
         version: link:../mtext-input-box
       '@mlightcad/mtext-renderer':
-        specifier: ^0.11.4
-        version: 0.11.4(three@0.172.0)
+        specifier: ^0.11.5
+        version: 0.11.5(three@0.172.0)
       diff:
         specifier: ^7.0.0
         version: 7.0.0
@@ -161,8 +161,8 @@ importers:
         specifier: ^9.34.0
         version: 9.39.2
       '@mlightcad/mtext-renderer':
-        specifier: ^0.11.4
-        version: 0.11.4(three@0.172.0)
+        specifier: ^0.11.5
+        version: 0.11.5(three@0.172.0)
       '@types/node':
         specifier: ^24.4.0
         version: 24.10.13
@@ -587,13 +587,13 @@ packages:
   '@mlightcad/mtext-parser@1.5.0':
     resolution: {integrity: sha512-Yl/IQmSIGV1UUl/TyUptoOpNBunywcEE7yh4k9SFDXljHDTTI92VmqkVFxf4eYzhoWF4MNXIl4qgQV1P1Rbn6g==}
 
-  '@mlightcad/mtext-renderer@0.11.4':
-    resolution: {integrity: sha512-ToYSOmDOYl5eQdNt3wGSY4Ei9Xc9OX1MM6IjlJV3r1gCYUnQKkyY4LkEuBNi3NspdOXXFNwFkR2iuoeKtxaObQ==}
+  '@mlightcad/mtext-renderer@0.11.5':
+    resolution: {integrity: sha512-0XCgV5LIwdPz+JEVKukbNEqp7iofvCRDByJhzSCLPfnQLWuZBEFNW0savqb4nEAC022WSJzUjsM7Te0pa0ZlBQ==}
     peerDependencies:
       three: ^0.172.0
 
-  '@mlightcad/shx-parser@1.3.4':
-    resolution: {integrity: sha512-y0clXQIBslAOwTMFtUnQqzZqhtD5lxUCiJA7lYTYvzO2dzBtsd2LVhUYdyA6R6DwjygOzjegXcP/4oCIsDiZhg==}
+  '@mlightcad/shx-parser@1.3.5':
+    resolution: {integrity: sha512-svlplug902g9dZWARFbpwjRpIoMFDmoCqmjTDx0QGHxdPv7pcQz/5WB5IIfYXyRyGobVSK6YQWVdm+LolPnWsA==}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -2267,16 +2267,16 @@ snapshots:
 
   '@mlightcad/mtext-parser@1.5.0': {}
 
-  '@mlightcad/mtext-renderer@0.11.4(three@0.172.0)':
+  '@mlightcad/mtext-renderer@0.11.5(three@0.172.0)':
     dependencies:
       '@mlightcad/mtext-parser': 1.5.0
-      '@mlightcad/shx-parser': 1.3.4
+      '@mlightcad/shx-parser': 1.3.5
       iconv-lite: 0.7.2
       idb: 8.0.3
       opentype.js: 2.0.0
       three: 0.172.0
 
-  '@mlightcad/shx-parser@1.3.4': {}
+  '@mlightcad/shx-parser@1.3.5': {}
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:
