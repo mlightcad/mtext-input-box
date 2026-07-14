@@ -240,6 +240,9 @@ function syncRendererSizeToCanvas(): void {
 
 syncRendererSizeToCanvas();
 window.addEventListener('resize', syncRendererSizeToCanvas);
+if (typeof ResizeObserver !== 'undefined') {
+  new ResizeObserver(syncRendererSizeToCanvas).observe(canvasWrap);
+}
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableRotate = true;
