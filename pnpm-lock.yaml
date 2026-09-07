@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@mlightcad/mtext-renderer': ^0.12.5
+  '@mlightcad/mtext-renderer': ^0.12.7
   three: ^0.172.0
 
 importers:
@@ -59,8 +59,8 @@ importers:
         specifier: workspace:*
         version: link:../mtext-input-box
       '@mlightcad/mtext-renderer':
-        specifier: ^0.12.5
-        version: 0.12.5(three@0.172.0)
+        specifier: ^0.12.7
+        version: 0.12.7(three@0.172.0)
       diff:
         specifier: ^7.0.0
         version: 7.0.0
@@ -161,8 +161,8 @@ importers:
         specifier: ^9.34.0
         version: 9.39.2
       '@mlightcad/mtext-renderer':
-        specifier: ^0.12.5
-        version: 0.12.5(three@0.172.0)
+        specifier: ^0.12.7
+        version: 0.12.7(three@0.172.0)
       '@types/node':
         specifier: ^24.4.0
         version: 24.10.13
@@ -584,11 +584,11 @@ packages:
   '@manypkg/get-packages@1.1.3':
     resolution: {integrity: sha512-fo+QhuU3qE/2TQMQmbVMqaQ6EWbMhi4ABWP+O4AM1NqPBuy0OrApV5LO6BrrgnhtAHS2NH6RrVk9OL181tTi8A==}
 
-  '@mlightcad/mtext-parser@1.5.0':
-    resolution: {integrity: sha512-Yl/IQmSIGV1UUl/TyUptoOpNBunywcEE7yh4k9SFDXljHDTTI92VmqkVFxf4eYzhoWF4MNXIl4qgQV1P1Rbn6g==}
+  '@mlightcad/mtext-parser@1.5.1':
+    resolution: {integrity: sha512-fOs7Qi54YwKtcyPe1VzVeFxveDWpvDnzwonZijsG3bBxohYxrX+Q2p3XvqaUBIkVNQbnHBFEU/TDOfjIPGy0gw==}
 
-  '@mlightcad/mtext-renderer@0.12.5':
-    resolution: {integrity: sha512-8e4PHWZigsgJR3EdF5ciniWi1Nr9SkaUuEQACarIU8IzBnbxm9hL6ficTcq8mzbgOW/ZNwxAM+tKUCGCv60GWA==}
+  '@mlightcad/mtext-renderer@0.12.7':
+    resolution: {integrity: sha512-DgbmlvhFUTW+w+QMcbjmvbzokqv9Sx3Jv3dglebQDSDV30ZJ+XNuXh7UpCLrKne2nAzDlaZoYpKpLi+Cs+pyaA==}
     peerDependencies:
       three: ^0.172.0
 
@@ -2265,11 +2265,11 @@ snapshots:
       globby: 11.1.0
       read-yaml-file: 1.1.0
 
-  '@mlightcad/mtext-parser@1.5.0': {}
+  '@mlightcad/mtext-parser@1.5.1': {}
 
-  '@mlightcad/mtext-renderer@0.12.5(three@0.172.0)':
+  '@mlightcad/mtext-renderer@0.12.7(three@0.172.0)':
     dependencies:
-      '@mlightcad/mtext-parser': 1.5.0
+      '@mlightcad/mtext-parser': 1.5.1
       '@mlightcad/shx-parser': 1.4.5
       iconv-lite: 0.7.2
       idb: 8.0.3
