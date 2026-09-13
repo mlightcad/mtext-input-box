@@ -6,5 +6,5 @@ allowBuilds:
   nx: true
   vue-demi: true
 overrides:
-  '@mlightcad/mtext-renderer': '^0.12.7'
+  '@mlightcad/mtext-renderer': '^0.12.8'
   three: '^0.172.0'
