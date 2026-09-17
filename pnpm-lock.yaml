@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@mlightcad/mtext-renderer': ^0.12.10
+  '@mlightcad/mtext-renderer': ^0.12.11
   three: ^0.172.0
 
 importers:
@@ -59,8 +59,8 @@ importers:
         specifier: workspace:*
         version: link:../mtext-input-box
       '@mlightcad/mtext-renderer':
-        specifier: ^0.12.10
-        version: 0.12.10(three@0.172.0)
+        specifier: ^0.12.11
+        version: 0.12.11(three@0.172.0)
       diff:
         specifier: ^7.0.0
         version: 7.0.0
@@ -161,8 +161,8 @@ importers:
         specifier: ^9.34.0
         version: 9.39.2
       '@mlightcad/mtext-renderer':
-        specifier: ^0.12.10
-        version: 0.12.10(three@0.172.0)
+        specifier: ^0.12.11
+        version: 0.12.11(three@0.172.0)
       '@types/node':
         specifier: ^24.4.0
         version: 24.10.13
@@ -587,8 +587,8 @@ packages:
   '@mlightcad/mtext-parser@1.5.1':
     resolution: {integrity: sha512-fOs7Qi54YwKtcyPe1VzVeFxveDWpvDnzwonZijsG3bBxohYxrX+Q2p3XvqaUBIkVNQbnHBFEU/TDOfjIPGy0gw==}
 
-  '@mlightcad/mtext-renderer@0.12.10':
-    resolution: {integrity: sha512-RN8Ip2jGMjYZMygJ39SqOPL4/tea+Niq6saXG5VWUcZQBYRWRGz9M9itWyUPzPK1NVRFqgqFXHAbMtPauvu8Hg==}
+  '@mlightcad/mtext-renderer@0.12.11':
+    resolution: {integrity: sha512-mpObs/YzHR2s+X3oM2WuxwFAOcdl9Ta+D3HDngXN7eWNKz0thEd/2Oy7u8S5y+AhmtMbQ7ywlrONhE7SEiH7QQ==}
     peerDependencies:
       three: ^0.172.0
 
@@ -2267,7 +2267,7 @@ snapshots:
 
   '@mlightcad/mtext-parser@1.5.1': {}
 
-  '@mlightcad/mtext-renderer@0.12.10(three@0.172.0)':
+  '@mlightcad/mtext-renderer@0.12.11(three@0.172.0)':
     dependencies:
       '@mlightcad/mtext-parser': 1.5.1
       '@mlightcad/shx-parser': 1.4.5
