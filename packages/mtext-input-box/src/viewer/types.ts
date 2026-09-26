@@ -1,9 +1,8 @@
 import type { Box, CursorStyle, SelectionStyle } from '@mlightcad/text-box-cursor';
+import type { MTextColor, MTextParagraphAlignment } from '@mlightcad/mtext-parser';
 import type {
   ColorSettings,
   MTextAttachmentPoint,
-  MTextColor,
-  MTextParagraphAlignment,
   TextStyle
 } from '@mlightcad/mtext-renderer';
 import type * as THREE from 'three';

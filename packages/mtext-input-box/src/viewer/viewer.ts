@@ -13,17 +13,19 @@ import {
   LINE_SPACING_SCALE_FACTOR,
   MText,
   MTextAttachmentPoint,
-  MTextColor,
-  MTextContext,
   MTextFlowDirection,
-  MTextLineAlignment,
-  MTextParagraphAlignment,
   UnifiedRenderer,
   type ColorSettings,
   type MTextData,
   type MTextObject,
   type TextStyle
 } from '@mlightcad/mtext-renderer';
+import {
+  MTextColor,
+  MTextContext,
+  MTextLineAlignment,
+  MTextParagraphAlignment
+} from '@mlightcad/mtext-parser';
 import * as THREE from 'three';
 import { DEFAULT_FONT_FAMILY, defaultCharFormat, sameFormat } from './format';
 import { hasNodeStyle, MTextDocument, type MTextAst, type MTextStyle } from '../model';

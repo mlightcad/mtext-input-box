@@ -9,7 +9,7 @@ Three.js-based MTEXT editor component with built-in IME bridge, cursor/selection
 - MTEXT-style editing in Three.js
 - Keyboard/mouse/IME editing, selection, formatting, and undo/redo
 - Built-in toolbar (configurable theme, font list, container, and offset)
-- Integration with `@mlightcad/mtext-renderer` and `@mlightcad/text-box-cursor`
+- Integration with `@mlightcad/mtext-parser`, `@mlightcad/mtext-renderer`, and `@mlightcad/text-box-cursor`
 
 ## Technical Details
 
@@ -20,17 +20,17 @@ Three.js-based MTEXT editor component with built-in IME bridge, cursor/selection
 ## Install
 
 ```bash
-pnpm add @mlightcad/mtext-input-box three @mlightcad/mtext-renderer
+pnpm add @mlightcad/mtext-input-box three @mlightcad/mtext-parser @mlightcad/mtext-renderer
 ```
 
-`three` and `@mlightcad/mtext-renderer` are peer dependencies of `@mlightcad/mtext-input-box`, so your app should install them directly.
+`three`, `@mlightcad/mtext-parser`, and `@mlightcad/mtext-renderer` are peer dependencies of `@mlightcad/mtext-input-box`, so your app should install them directly.
 
 ## Basic Usage
 
 ```ts
 import * as THREE from 'three';
 import { MTextInputBox } from '@mlightcad/mtext-input-box';
-import { MTextColor } from '@mlightcad/mtext-renderer';
+import { MTextColor } from '@mlightcad/mtext-parser';
 
 const scene = new THREE.Scene();
 const camera = new THREE.OrthographicCamera(0, 1000, 600, 0, -1000, 1000);
@@ -108,7 +108,8 @@ Example (mount a Vue color picker):
 
 ```ts
 import { createApp, h, ref } from 'vue';
-import { getColorByIndex, MTextColor } from '@mlightcad/mtext-renderer';
+import { MTextColor } from '@mlightcad/mtext-parser';
+import { getColorByIndex } from '@mlightcad/mtext-renderer';
 
 toolbar: {
   colorPicker: ({ container, initialColor, theme, onChange }) => {

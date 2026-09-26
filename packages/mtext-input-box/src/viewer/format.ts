@@ -1,5 +1,5 @@
 import type { CharFormat } from './types';
-import { MTextParagraphAlignment } from '@mlightcad/mtext-renderer';
+import { MTextParagraphAlignment } from '@mlightcad/mtext-parser';
 
 export const DEFAULT_FONT_FAMILY = 'simkai';
 

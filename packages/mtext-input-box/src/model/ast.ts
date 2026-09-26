@@ -3,7 +3,7 @@ import {
   MTextParser,
   type MTextParserOptions,
   TokenType
-} from '@mlightcad/mtext-renderer';
+} from '@mlightcad/mtext-parser';
 import { cloneStyle, contextToStyle, hasNodeStyle, serializeStyleDelta } from './style';
 import type { MTextAst, MTextAstNode, MTextStyle } from './types';
 
