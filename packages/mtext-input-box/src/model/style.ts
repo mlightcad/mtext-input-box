@@ -6,7 +6,7 @@ import {
   type FactorValue,
   type RGB,
   type ParagraphProperties
-} from '@mlightcad/mtext-renderer';
+} from '@mlightcad/mtext-parser';
 import type {
   MTextAstCharNode,
   MTextAstColumnBreakNode,

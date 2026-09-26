@@ -8,8 +8,8 @@ import {
 import { diffWordsWithSpace } from 'diff';
 import { ElColorPicker } from 'element-plus';
 import 'element-plus/dist/index.css';
-import { createDefaultColorSettings, MTextColor } from '@mlightcad/mtext-renderer';
-import { getColorByIndex } from '@mlightcad/mtext-renderer';
+import { MTextColor } from '@mlightcad/mtext-parser';
+import { createDefaultColorSettings, getColorByIndex } from '@mlightcad/mtext-renderer';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { createApp, defineComponent, h, ref } from 'vue';

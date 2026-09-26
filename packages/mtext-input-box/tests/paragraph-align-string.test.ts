@@ -4,7 +4,7 @@ import {
   MTextParagraphAlignment,
   MTextParser,
   TokenType
-} from '@mlightcad/mtext-renderer';
+} from '@mlightcad/mtext-parser';
 import { MTextDocument } from '../src/model/document';
 import { contextToStyle } from '../src/model/style';
 

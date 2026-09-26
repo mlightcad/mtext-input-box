@@ -12,20 +12,34 @@ vi.mock('@mlightcad/text-box-cursor', () => {
   };
 });
 
-vi.mock('@mlightcad/mtext-renderer', () => {
-  class UnifiedRenderer {}
+vi.mock('@mlightcad/mtext-parser', () => {
   class MTextContext {}
   return {
-    getColorByIndex: () => 0xffffff,
-    UnifiedRenderer,
     MTextContext,
-    MTextAttachmentPoint: { TopLeft: 1 },
-    MTextFlowDirection: { LEFT_TO_RIGHT: 1 },
+    MTextColor: class MTextColor {
+      constructor(public aci = 256) {}
+    },
     MTextLineAlignment: {
       TOP: 1,
       MIDDLE: 2,
       BOTTOM: 3
+    },
+    MTextParagraphAlignment: {
+      DEFAULT: 0,
+      LEFT: 1,
+      RIGHT: 2,
+      CENTER: 3
     }
+  };
+});
+
+vi.mock('@mlightcad/mtext-renderer', () => {
+  class UnifiedRenderer {}
+  return {
+    getColorByIndex: () => 0xffffff,
+    UnifiedRenderer,
+    MTextAttachmentPoint: { TopLeft: 1 },
+    MTextFlowDirection: { LEFT_TO_RIGHT: 1 }
   };
 });
 

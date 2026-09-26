@@ -56,4 +56,4 @@ pnpm --filter @mlightcad/demo-mtext-input-box dev
 - Prefer editing TypeScript sources under `packages/*/src/`.
 - Keep changes consistent with existing ESM + TypeScript patterns.
 - If touching demos, verify with the relevant `pnpm --filter <demo> dev` or `build`.
-- `@mlightcad/mtext-input-box` expects `@mlightcad/mtext-renderer` and `three` as peer deps in consuming apps.
+- `@mlightcad/mtext-input-box` expects `@mlightcad/mtext-parser`, `@mlightcad/mtext-renderer`, and `three` as peer deps in consuming apps.

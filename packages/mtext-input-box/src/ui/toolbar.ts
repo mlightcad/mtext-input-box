@@ -5,7 +5,7 @@ import type {
   MTextToolbarTheme
 } from '../viewer/types';
 import { getColorByIndex } from '@mlightcad/mtext-renderer';
-import { MTextColor } from '@mlightcad/mtext-renderer';
+import { MTextColor } from '@mlightcad/mtext-parser';
 import { toolbarIcons, type ToolbarIconName } from './icons';
 
 export interface ToolbarOptions {

@@ -4,7 +4,7 @@ import type {
   MTextLineAlignment,
   ParagraphProperties,
   RGB
-} from '@mlightcad/mtext-renderer';
+} from '@mlightcad/mtext-parser';
 
 export type MTextScript = 'normal' | 'superscript' | 'subscript';
 
