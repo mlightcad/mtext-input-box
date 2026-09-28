@@ -12,8 +12,8 @@
   },
   "dependencies": {
     "@mlightcad/mtext-input-box": "workspace:*",
-    "@mlightcad/mtext-parser": "^1.5.2",
-    "@mlightcad/mtext-renderer": "^0.13.0",
+    "@mlightcad/mtext-parser": "^1.5.3",
+    "@mlightcad/mtext-renderer": "^0.13.1",
     "element-plus": "^2.11.5",
     "three": "^0.172.0",
     "diff": "^7.0.0",
