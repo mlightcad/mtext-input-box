@@ -6,7 +6,7 @@ settings:
 
 overrides:
   '@mlightcad/mtext-parser': ^1.5.3
-  '@mlightcad/mtext-renderer': ^0.13.2
+  '@mlightcad/mtext-renderer': ^0.13.3
   three: ^0.172.0
 
 importers:
@@ -63,8 +63,8 @@ importers:
         specifier: ^1.5.3
         version: 1.5.3
       '@mlightcad/mtext-renderer':
-        specifier: ^0.13.2
-        version: 0.13.2(@mlightcad/mtext-parser@1.5.3)(three@0.172.0)
+        specifier: ^0.13.3
+        version: 0.13.3(@mlightcad/mtext-parser@1.5.3)(three@0.172.0)
       diff:
         specifier: ^7.0.0
         version: 7.0.0
@@ -168,8 +168,8 @@ importers:
         specifier: ^1.5.3
         version: 1.5.3
       '@mlightcad/mtext-renderer':
-        specifier: ^0.13.2
-        version: 0.13.2(@mlightcad/mtext-parser@1.5.3)(three@0.172.0)
+        specifier: ^0.13.3
+        version: 0.13.3(@mlightcad/mtext-parser@1.5.3)(three@0.172.0)
       '@types/node':
         specifier: ^24.4.0
         version: 24.10.13
@@ -594,8 +594,8 @@ packages:
   '@mlightcad/mtext-parser@1.5.3':
     resolution: {integrity: sha512-RLI9szHHTWbphy2qkYSGSMXh8bsuOCAOZnew8tbYmQepQZvnAoKV7CtSyuwlo8GGfYCMAJARHORFLtLBFmtQhg==}
 
-  '@mlightcad/mtext-renderer@0.13.2':
-    resolution: {integrity: sha512-m65cWbKzU6Vd6osts0eCFM1yCrqfaSQuUBSSUir62xBCyMUptzWkfnB+fiblvJS3vQwG9Ke/Fbi3yhFWGzqyRQ==}
+  '@mlightcad/mtext-renderer@0.13.3':
+    resolution: {integrity: sha512-V0Qozh6Rsr8Fsoreph4XJzzbhvT2Griv0MHv1S/6Aqfpqq6Vr/Gq3opUAm8PCeU9TN1G3ulxHMYSTfJh9L2TOw==}
     peerDependencies:
       '@mlightcad/mtext-parser': ^1.5.3
       three: ^0.172.0
@@ -2275,7 +2275,7 @@ snapshots:
 
   '@mlightcad/mtext-parser@1.5.3': {}
 
-  '@mlightcad/mtext-renderer@0.13.2(@mlightcad/mtext-parser@1.5.3)(three@0.172.0)':
+  '@mlightcad/mtext-renderer@0.13.3(@mlightcad/mtext-parser@1.5.3)(three@0.172.0)':
     dependencies:
       '@mlightcad/mtext-parser': 1.5.3
       '@mlightcad/shx-parser': 1.4.5
