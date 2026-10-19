@@ -1,6 +1,6 @@
 {
   "name": "@mlightcad/mtext-input-box",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -28,21 +28,21 @@
     "@mlightcad/text-box-cursor": "workspace:*"
   },
   "peerDependencies": {
-    "@mlightcad/mtext-parser": "^1.5.4",
-    "@mlightcad/mtext-renderer": "^0.13.3",
-    "three": "^0.172.0"
+    "@mlightcad/mtext-parser": "^1.5.5",
+    "@mlightcad/mtext-renderer": "^0.13.5",
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",
-    "@mlightcad/mtext-parser": "^1.5.4",
-    "@mlightcad/mtext-renderer": "^0.13.3",
+    "@mlightcad/mtext-parser": "^1.5.5",
+    "@mlightcad/mtext-renderer": "^0.13.5",
     "@types/node": "^24.4.0",
-    "@types/three": "^0.172.0",
+    "@types/three": "^0.186.0",
     "@typescript-eslint/eslint-plugin": "^8.41.0",
     "@typescript-eslint/parser": "^8.41.0",
     "eslint": "^9.34.0",
     "eslint-config-prettier": "^10.1.8",
-    "three": "^0.172.0",
+    "three": "^0.186.1",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.41.0",
     "vitest": "^3.2.4"
