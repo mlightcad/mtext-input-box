@@ -39,7 +39,10 @@ vi.mock('@mlightcad/mtext-renderer', () => {
     getColorByIndex: () => 0xffffff,
     UnifiedRenderer,
     MTextAttachmentPoint: { TopLeft: 1 },
-    MTextFlowDirection: { LEFT_TO_RIGHT: 1 }
+    MTextFlowDirection: { LEFT_TO_RIGHT: 1 },
+    LINE_SPACING_SCALE_FACTOR: 5,
+    resolveMTextWrapWidth: ({ width }: { width: number }) => width,
+    estimateMTextWrapWidth: (_text: string, height: number) => Math.max(1, height * 1.5)
   };
 });
 
@@ -261,6 +264,10 @@ describe('MTextInputBox cursor/document index mapping', () => {
     const context = {
       position: { x: 10, y: 20 },
       width: 120,
+      declaredWidth: 120,
+      mtextString: '',
+      defaultTextStyle: { fixedTextHeight: 16 },
+      resolveEditorChromeWidth: () => 120,
       getFallbackLineAdvance: () => 16,
       toLocalBox: proto.toLocalBox,
       computeEditorVerticalBounds: proto.computeEditorVerticalBounds
@@ -321,6 +328,10 @@ describe('MTextInputBox cursor/document index mapping', () => {
     const context = {
       position: { x: 200, y: 20 },
       width: 120,
+      declaredWidth: 120,
+      mtextString: '',
+      defaultTextStyle: { fixedTextHeight: 16 },
+      resolveEditorChromeWidth: () => 120,
       editorAttachmentPoint: 3,
       getFallbackLineAdvance: () => 16,
       toLocalBox: proto.toLocalBox,
@@ -358,6 +369,10 @@ describe('MTextInputBox cursor/document index mapping', () => {
     const context = {
       position: { x: 10, y: 20 },
       width: 120,
+      declaredWidth: 120,
+      mtextString: '',
+      defaultTextStyle: { fixedTextHeight: 16 },
+      resolveEditorChromeWidth: () => 120,
       getFallbackLineAdvance: () => 16,
       toLocalBox: proto.toLocalBox,
       computeEditorVerticalBounds: proto.computeEditorVerticalBounds
@@ -408,6 +423,10 @@ describe('MTextInputBox cursor/document index mapping', () => {
     const context = {
       position: { x: 10, y: 20 },
       width: 120,
+      declaredWidth: 120,
+      mtextString: '',
+      defaultTextStyle: { fixedTextHeight: 16 },
+      resolveEditorChromeWidth: () => 120,
       getFallbackLineAdvance: () => 16,
       toLocalBox: proto.toLocalBox,
       computeEditorVerticalBounds: proto.computeEditorVerticalBounds
@@ -453,7 +472,7 @@ describe('MTextInputBox cursor/document index mapping', () => {
     });
   });
 
-  test('normalizes rendered content so position stays at the top-left edge', () => {
+  test('keeps renderer attachment without forcing top-left shift', () => {
     const proto = MTextInputBox.prototype as unknown as Record<string, (...args: any[]) => any>;
     const normalizeRenderedTopAlignment = proto.normalizeRenderedTopAlignment as (
       this: any,
@@ -465,7 +484,7 @@ describe('MTextInputBox cursor/document index mapping', () => {
       updateMatrixWorld: vi.fn()
     };
     const context = {
-      mtextInsertionOffset: new THREE.Vector3(0, 0, 0)
+      mtextInsertionOffset: new THREE.Vector3(0, -10, 0)
     };
     const rendered = {
       containerBox: { x: 0, y: -14, width: 120, height: 24 },
@@ -475,12 +494,13 @@ describe('MTextInputBox cursor/document index mapping', () => {
 
     normalizeRenderedTopAlignment.call(context, object, rendered);
 
-    expect(object.position.y).toBe(-10);
-    expect(object.updateMatrixWorld).toHaveBeenCalledWith(true);
-    expect(context.mtextInsertionOffset.toArray()).toEqual([0, -10, 0]);
-    expect(rendered.containerBox).toEqual({ x: 0, y: -24, width: 120, height: 24 });
-    expect(rendered.charBoxes[0].y).toBe(-5);
-    expect(rendered.lineLayouts[0].y).toBe(-5);
+    // Insertion point stays the DXF attachment anchor; glyphs are not shifted.
+    expect(object.position.y).toBe(0);
+    expect(object.updateMatrixWorld).not.toHaveBeenCalled();
+    expect(context.mtextInsertionOffset.toArray()).toEqual([0, 0, 0]);
+    expect(rendered.containerBox).toEqual({ x: 0, y: -14, width: 120, height: 24 });
+    expect(rendered.charBoxes[0].y).toBe(5);
+    expect(rendered.lineLayouts[0].y).toBe(5);
   });
 
   test('returns the original MTEXT insertion point without render alignment offset', () => {
@@ -506,10 +526,13 @@ describe('MTextInputBox cursor/document index mapping', () => {
     };
     const context = {
       width: 120,
+      declaredWidth: 120,
+      editorAttachmentPoint: 1,
       currentFormat: { fontSize: 10 },
       enableWordWrap: true,
       getChars: () => ['A'],
-      getFallbackLineAdvance: () => 15
+      getFallbackLineAdvance: () => 15,
+      attachmentVerticalOffsetForLocalBox: proto.attachmentVerticalOffsetForLocalBox
     };
 
     const result = createFallbackCharBoxes.call(context);
@@ -517,6 +540,31 @@ describe('MTextInputBox cursor/document index mapping', () => {
     expect(result.containerBox).toEqual({ x: 0, y: -15, width: 120, height: 15 });
     expect(result.lineLayouts).toEqual([{ y: -7.5, height: 15 }]);
     expect(result.charBoxes[0]).toMatchObject({ y: -7.5, height: 15 });
+  });
+
+  test('fallback layout pins bottom-left attachment to the insertion point', () => {
+    const proto = MTextInputBox.prototype as unknown as Record<string, (...args: any[]) => any>;
+    const createFallbackCharBoxes = proto.createFallbackCharBoxes as (this: any) => {
+      containerBox: { x: number; y: number; width: number; height: number };
+      charBoxes: Array<{ x: number; y: number; width: number; height: number }>;
+      lineLayouts: Array<{ y: number; height: number }>;
+    };
+    const context = {
+      width: 120,
+      declaredWidth: 120,
+      editorAttachmentPoint: 7, // BottomLeft
+      currentFormat: { fontSize: 10 },
+      enableWordWrap: true,
+      getChars: () => ['A'],
+      getFallbackLineAdvance: () => 15,
+      attachmentVerticalOffsetForLocalBox: proto.attachmentVerticalOffsetForLocalBox
+    };
+
+    const result = createFallbackCharBoxes.call(context);
+
+    expect(result.containerBox).toEqual({ x: 0, y: 0, width: 120, height: 15 });
+    expect(result.lineLayouts).toEqual([{ y: 7.5, height: 15 }]);
+    expect(result.charBoxes[0]).toMatchObject({ y: 7.5, height: 15 });
   });
 
   test('anchors empty-content cursor to first line center below container top', () => {
