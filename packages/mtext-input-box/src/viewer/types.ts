@@ -3,6 +3,7 @@ import type { MTextColor, MTextParagraphAlignment } from '@mlightcad/mtext-parse
 import type {
   ColorSettings,
   MTextAttachmentPoint,
+  MTextFlowDirection,
   TextStyle
 } from '@mlightcad/mtext-renderer';
 import type * as THREE from 'three';
@@ -190,14 +191,32 @@ export interface MTextInputBoxOptions {
   camera: THREE.Camera;
   /** Optional initial MTEXT source string. */
   initialText?: string;
-  /** Preferred editor width. */
+  /**
+   * Preferred editor wrap width in world units (DXF group 41).
+   * Values `<= 0` mean no defined wrap column (same as AutoCAD / mtext-renderer).
+   */
   width: number;
   /** Optional world-space origin of the editor container. */
   position?: THREE.Vector3;
   /**
    * Initial MTEXT attachment (DXF group 71). Defaults to top-left when omitted.
+   * The editor {@link position} is the DXF insertion point for this attachment
+   * (not always the top-left corner of the text box).
    */
   initialAttachmentPoint?: MTextAttachmentPoint;
+  /**
+   * MTEXT drawing / flow direction (DXF group 72). Defaults to left-to-right.
+   */
+  initialDrawingDirection?: MTextFlowDirection;
+  /** Optional rotation in radians (DXF group 50). */
+  rotation?: number;
+  /** Optional text direction vector; takes precedence over {@link rotation} when set. */
+  directionVector?: { x: number; y: number; z?: number };
+  /**
+   * Initial MTEXT line spacing factor (DXF group 44) forwarded to the renderer.
+   * When omitted, the renderer default is used (same as drawing display).
+   */
+  initialLineSpaceFactor?: number;
   /**
    * Default text style passed to `@mlightcad/mtext-renderer`.
    *

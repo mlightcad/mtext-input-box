@@ -9,11 +9,13 @@ import {
   type SelectionStyle
 } from '@mlightcad/text-box-cursor';
 import {
+  estimateMTextWrapWidth,
   getColorByIndex,
   LINE_SPACING_SCALE_FACTOR,
   MText,
   MTextAttachmentPoint,
   MTextFlowDirection,
+  resolveMTextWrapWidth,
   UnifiedRenderer,
   type ColorSettings,
   type MTextData,
@@ -61,7 +63,7 @@ function attachmentColumnMinLocal(
   width: number,
   attachment: MTextAttachmentPoint | undefined
 ): number {
-  const w = Math.max(1, width);
+  const w = Math.max(Number.EPSILON, width);
   const a = attachment as number | undefined;
   // Left column: 1 TL, 4 ML, 7 BL, 10 baseline-left
   if (a === undefined || a === 1 || a === 4 || a === 7 || a === 10) return 0;
@@ -103,6 +105,13 @@ export class MTextInputBox {
     bigFont: ''
   };
 
+  /**
+   * Declared MTEXT column width from the host (DXF group 41). Values `<= 0`
+   * mean no wrap column; layout then follows {@link resolveMTextWrapWidth} /
+   * rendered content bounds so the editor chrome matches the drawing.
+   */
+  private declaredWidth: number;
+  /** Effective wrap / chrome width used for hit-testing and the bounding box. */
   private width: number;
   private position: THREE.Vector3;
   private mtextInsertionOffset = new THREE.Vector3(0, 0, 0);
@@ -117,9 +126,16 @@ export class MTextInputBox {
   /**
    * MTEXT attachment (DXF group 71) for the editor box relative to
    * {@link position}. Drives {@link createMTextData} and contextual ribbon
-   * "Justify" / attachment controls.
+   * "Justify" / attachment controls. {@link position} is the DXF insertion
+   * point for this attachment (not always the box top-left).
    */
   private editorAttachmentPoint: MTextAttachmentPoint = MTextAttachmentPoint.TopLeft;
+  /** MTEXT flow direction (DXF group 72). */
+  private editorDrawingDirection: MTextFlowDirection = MTextFlowDirection.LEFT_TO_RIGHT;
+  /** Optional rotation in radians forwarded to the renderer. */
+  private editorRotation = 0;
+  /** Optional direction vector forwarded to the renderer when set. */
+  private editorDirectionVector: { x: number; y: number; z: number } | null = null;
   private static readonly DEFAULT_LINE_SPACE_FACTOR = 0.3;
   private cursorIndex = 0;
   private selectionStart = 0;
@@ -317,22 +333,50 @@ export class MTextInputBox {
     this.toolbarFontFamilies = options.toolbar?.fontFamilies ?? null;
     this.toolbarColorPicker = options.toolbar?.colorPicker;
     this.colorSettings = options.colorSettings;
-    this.width = Math.max(1, options.width);
     this.position = options.position?.clone() ?? new THREE.Vector3(0, 0, 0);
     if (options.initialAttachmentPoint !== undefined) {
       this.editorAttachmentPoint = options.initialAttachmentPoint;
+    }
+    if (options.initialDrawingDirection !== undefined) {
+      this.editorDrawingDirection = options.initialDrawingDirection;
+    }
+    if (typeof options.rotation === 'number' && Number.isFinite(options.rotation)) {
+      this.editorRotation = options.rotation;
+    }
+    if (
+      options.directionVector &&
+      Number.isFinite(options.directionVector.x) &&
+      Number.isFinite(options.directionVector.y)
+    ) {
+      this.editorDirectionVector = {
+        x: options.directionVector.x,
+        y: options.directionVector.y,
+        z: Number.isFinite(options.directionVector.z) ? (options.directionVector.z as number) : 0
+      };
+    }
+    if (
+      typeof options.initialLineSpaceFactor === 'number' &&
+      Number.isFinite(options.initialLineSpaceFactor) &&
+      options.initialLineSpaceFactor > 0
+    ) {
+      this.editorLineSpaceFactor = options.initialLineSpaceFactor;
     }
     this.enableWordWrap = options.enableWordWrap ?? true;
 
     const textStyle = options.textStyle ?? MTextInputBox.DEFAULT_TEXT_STYLE;
     const fixedTextHeight = Math.max(
-      1,
+      Number.EPSILON,
       Number.isFinite(textStyle.fixedTextHeight)
         ? textStyle.fixedTextHeight
         : MTextInputBox.DEFAULT_TEXT_STYLE.fixedTextHeight
     );
+    this.declaredWidth = Number.isFinite(options.width) ? options.width : 0;
+    this.width = this.resolveEditorChromeWidth(
+      options.initialText ?? '',
+      fixedTextHeight
+    );
     const lastHeight = Math.max(
-      1,
+      Number.EPSILON,
       Number.isFinite(textStyle.lastHeight) ? textStyle.lastHeight : fixedTextHeight
     );
     this.defaultTextStyle = {
@@ -399,11 +443,12 @@ export class MTextInputBox {
       scaleY: 1
     });
     this.createBoundingBox(options.showBoundingBox ?? true, options.boundingBoxStyle);
+    // Hide chrome until the first font-correct layout; otherwise a fallback
+    // wrap box flashes at the insertion point (often looking like BL attachment).
+    if (this.boundingBoxObject) this.boundingBoxObject.visible = false;
 
-    this.setText(options.initialText ?? '');
     this.attachIme(options.imeTarget);
-
-    void this.initializeRenderer();
+    void this.initializeRenderer(options.initialText ?? '');
   }
 
   /** Sets full text and rebuilds model/layout state. */
@@ -1172,7 +1217,10 @@ export class MTextInputBox {
     }
 
     this.cursorRenderer.show();
-    if (this.boundingBoxObject) this.boundingBoxObject.visible = true;
+    // Keep the box hidden until the first font-correct layout finishes.
+    if (this.boundingBoxObject) {
+      this.boundingBoxObject.visible = this.rendererReady;
+    }
 
     if (target && this.toolbarEnabled) {
       this.mountToolbar(target);
@@ -1419,14 +1467,41 @@ export class MTextInputBox {
     return x >= box.x && x <= right && y >= box.y && y <= bottom;
   }
 
-  private async initializeRenderer(): Promise<void> {
+  private async initializeRenderer(initialText = ''): Promise<void> {
     try {
-      await this.mtextRenderer.loadFonts([DEFAULT_FONT_FAMILY]);
+      // Seed string + document so font collection sees style and `\f` content
+      // fonts, but do not layout yet — fallback metrics wrap incorrectly vs
+      // the drawing.
+      this.mtextString = initialText;
+      this.document = this.createNormalizedDocument(initialText);
+      this.document.cursor = 0;
+      this.uiAdapter = new EditorUiAdapter(this.document);
+      this.clearHistory();
+      this.syncUiStateFromDocument();
+
+      // Load the fonts actually required by the initial content/style before the
+      // first layout. Rendering with only the default family first produces wrong
+      // CJK advances (wrap + attachment drift); a later font reload then "fixes"
+      // the box on the second open once fonts are cached.
+      const fonts = this.collectFontNamesForText(initialText);
+      const toLoad = fonts.length > 0 ? fonts : [DEFAULT_FONT_FAMILY];
+      await this.mtextRenderer.loadFonts(toLoad);
+      this.lastFontKey = toLoad
+        .map((font) => font.toLowerCase())
+        .sort()
+        .join('|');
       this.rendererReady = true;
-      this.ensureFontsLoaded();
-      this.relayout();
+      this.setText(initialText);
+      if (this.boundingBoxObject && this.isActiveEditor()) {
+        this.boundingBoxObject.visible = true;
+      }
     } catch (error) {
       console.error('[mtext-input-box] Failed to initialize mtext renderer fonts', error);
+      this.rendererReady = true;
+      this.setText(initialText);
+      if (this.boundingBoxObject && this.isActiveEditor()) {
+        this.boundingBoxObject.visible = true;
+      }
     }
   }
 
@@ -1455,8 +1530,10 @@ export class MTextInputBox {
       this.replaceRenderedObject(object);
 
       const rendered = this.extractBoxesFromRenderedObject(object);
+      // Keep the renderer attachment anchor: `position` is the DXF insertion
+      // point. Do not force top-left by shifting glyphs (that misaligned
+      // bottom/middle/center attachments vs the original entity).
       this.mtextInsertionOffset.set(0, 0, 0);
-      this.normalizeRenderedTopAlignment(object, rendered);
       this.layoutContainer = rendered.containerBox;
       this.updateCursorData(rendered.charBoxes, rendered.lineBreakIndices, rendered.lineLayouts);
       this.updateBoundingBoxGeometry();
@@ -1491,7 +1568,7 @@ export class MTextInputBox {
       });
   }
 
-  private collectFontNamesForText(): string[] {
+  private collectFontNamesForText(text = this.mtextString): string[] {
     const fonts = new Set<string>();
     const addFont = (name?: string): void => {
       if (!name) return;
@@ -1504,7 +1581,7 @@ export class MTextInputBox {
     addFont(this.defaultTextStyle.bigFont);
 
     try {
-      const fromContent = MText.getFonts(this.mtextString || '', true);
+      const fromContent = MText.getFonts(text || '', true);
       for (const fontName of fromContent) {
         addFont(fontName);
       }
@@ -1701,7 +1778,7 @@ export class MTextInputBox {
       .filter((line) => Number.isFinite(line.y) && Number.isFinite(line.height))
       .map((line) => ({
         y: line.y - this.position.y,
-        height: Math.max(1, line.height)
+        height: Math.max(Number.EPSILON, line.height)
       }));
 
     for (const entry of layout?.chars ?? []) {
@@ -1727,10 +1804,36 @@ export class MTextInputBox {
       local
     );
 
+    // Prefer the rendered glyph span when DXF width is undefined (no wrap), so
+    // the blue editor box matches the on-drawing text instead of a 1-unit stub.
+    const boxWidth =
+      this.declaredWidth > 0
+        ? Math.max(
+            Number.EPSILON,
+            this.resolveEditorChromeWidth(
+              this.mtextString,
+              this.defaultTextStyle.fixedTextHeight
+            )
+          )
+        : Math.max(
+            local?.width ?? 0,
+            this.getFallbackLineAdvance() * 0.6,
+            Number.EPSILON
+          );
+    this.width = boxWidth;
+    // For a defined wrap column, pin chrome to the attachment column. For
+    // no-wrap content, follow the actual glyph AABB so a baseline/middle
+    // insertion grip stays aligned with the drawing (not forced to BL/TL).
+    const columnMinX =
+      this.declaredWidth > 0
+        ? attachmentColumnMinLocal(boxWidth, this.editorAttachmentPoint)
+        : Number.isFinite(local?.x)
+          ? (local as Box).x
+          : attachmentColumnMinLocal(boxWidth, this.editorAttachmentPoint);
     const containerBox = {
-      x: attachmentColumnMinLocal(this.width, this.editorAttachmentPoint),
+      x: columnMinX,
       y: containerTop,
-      width: Math.max(1, this.width),
+      width: boxWidth,
       height: Math.max(0, containerBottom - containerTop)
     };
     const minHeight = this.getFallbackLineAdvance();
@@ -1748,22 +1851,16 @@ export class MTextInputBox {
     };
   }
 
-  private normalizeRenderedTopAlignment(object: MTextObject, rendered: CursorLayoutData): void {
-    const topY = rendered.containerBox.y + rendered.containerBox.height;
-    const dy = -topY;
-    if (!Number.isFinite(dy) || Math.abs(dy) < 1e-8) return;
-
-    this.mtextInsertionOffset.set(0, dy, 0);
-    object.position.y += dy;
-    object.updateMatrixWorld(true);
-
-    rendered.containerBox.y += dy;
-    rendered.charBoxes.forEach((box) => {
-      box.y += dy;
-    });
-    rendered.lineLayouts?.forEach((line) => {
-      line.y += dy;
-    });
+  /**
+   * @deprecated No longer shifts rendered content to top-left. Attachment is
+   * handled by `@mlightcad/mtext-renderer` relative to the insertion point.
+   * Kept for tests that still call the method on the prototype.
+   */
+  private normalizeRenderedTopAlignment(
+    ..._args: [MTextObject, CursorLayoutData]
+  ): void {
+    void _args;
+    this.mtextInsertionOffset.set(0, 0, 0);
   }
 
   private toLocalBox(worldBox: THREE.Box3): Box {
@@ -1793,8 +1890,11 @@ export class MTextInputBox {
     const charBoxes: Box[] = [];
     const lineBreakIndices: number[] = [];
     const lineLayouts: LineLayoutInput[] = [];
+    const columnMinX = attachmentColumnMinLocal(this.width, this.editorAttachmentPoint);
 
-    let x = 0;
+    // Lay out as if top-left were at local y=0, then shift so the attachment
+    // point of the box sits on the insertion origin (matching the renderer).
+    let x = columnMinX;
     let lineTop = 0;
     let minY = -lineHeight;
     lineLayouts.push({ y: lineTop - lineHeight / 2, height: lineHeight });
@@ -1802,17 +1902,22 @@ export class MTextInputBox {
     for (const char of this.getChars()) {
       if (char === '\n') {
         lineBreakIndices.push(charBoxes.length);
-        x = 0;
+        x = columnMinX;
         lineTop -= lineHeight;
         minY = Math.min(minY, lineTop - lineHeight);
         lineLayouts.push({ y: lineTop - lineHeight / 2, height: lineHeight });
         continue;
       }
 
-      const width = Math.max(1, this.currentFormat.fontSize * 0.6);
-      if (this.enableWordWrap && x > 0 && x + width > this.width) {
+      const width = Math.max(Number.EPSILON, this.currentFormat.fontSize * 0.6);
+      if (
+        this.enableWordWrap &&
+        this.declaredWidth > 0 &&
+        x > columnMinX &&
+        x + width > columnMinX + this.width
+      ) {
         lineBreakIndices.push(charBoxes.length);
-        x = 0;
+        x = columnMinX;
         lineTop -= lineHeight;
         minY = Math.min(minY, lineTop - lineHeight);
         lineLayouts.push({ y: lineTop - lineHeight / 2, height: lineHeight });
@@ -1822,17 +1927,39 @@ export class MTextInputBox {
       x += width;
     }
 
+    const maxY = 0;
+    const boxHeight = Math.max(Number.EPSILON, maxY - minY);
+    const dy = this.attachmentVerticalOffsetForLocalBox(minY, maxY);
+    if (dy !== 0) {
+      minY += dy;
+      for (const box of charBoxes) box.y += dy;
+      for (const line of lineLayouts) line.y += dy;
+    }
+
     return {
       containerBox: {
-        x: attachmentColumnMinLocal(this.width, this.editorAttachmentPoint),
+        x: columnMinX,
         y: minY,
         width: this.width,
-        height: Math.max(1, -minY)
+        height: boxHeight
       },
       charBoxes,
       lineBreakIndices,
       lineLayouts
     };
+  }
+
+  /**
+   * Translation that pins the attachment edge/center of a local axis-aligned
+   * box `[minY, maxY]` onto local y = 0 (the insertion point).
+   */
+  private attachmentVerticalOffsetForLocalBox(minY: number, maxY: number): number {
+    const midY = (minY + maxY) / 2;
+    const a = this.editorAttachmentPoint as number | undefined;
+    if (a === undefined || a === 1 || a === 2 || a === 3) return -maxY;
+    if (a === 4 || a === 5 || a === 6) return -midY;
+    // Bottom / baseline rows (7–12)
+    return -minY;
   }
 
   private createBoundingBox(enabled: boolean, style?: MTextBoundingBoxStyle): void {
@@ -2047,7 +2174,7 @@ export class MTextInputBox {
   ): CharFormat {
     const base = defaultCharFormat();
     base.fontFamily = style.font || base.fontFamily;
-    base.fontSize = Math.max(1, style.fixedTextHeight);
+    base.fontSize = Math.max(Number.EPSILON, style.fixedTextHeight);
     const color = this.resolveBaseFormatColor(colorSettings);
     base.aci = color.aci;
     base.rgb = color.rgb;
@@ -2059,21 +2186,66 @@ export class MTextInputBox {
     return base;
   }
 
+  /**
+   * Resolves the wrap/chrome width the editor should use so layout matches
+   * `@mlightcad/mtext-renderer` (including tiny/corrupt DXF group-41 values).
+   * When the declared width is `<= 0`, returns a content-based estimate for the
+   * bounding box only; {@link createMTextData} still passes `0` to the renderer.
+   */
+  private resolveEditorChromeWidth(text: string, height: number): number {
+    const safeHeight = Math.max(Number.EPSILON, height);
+    const resolved = resolveMTextWrapWidth({
+      text,
+      height: safeHeight,
+      width: this.declaredWidth
+    });
+    if (typeof resolved === 'number' && Number.isFinite(resolved) && resolved > 0) {
+      return resolved;
+    }
+    return Math.max(
+      estimateMTextWrapWidth(text, safeHeight),
+      safeHeight * 1.5,
+      Number.EPSILON
+    );
+  }
+
   private createMTextData(): MTextData {
+    const height = Math.max(Number.EPSILON, this.defaultTextStyle.fixedTextHeight);
+    // Keep DXF "no wrap" (width <= 0) and let the renderer expand absurdly small
+    // positive widths via resolveMTextWrapWidth — same rules as drawing display.
+    const renderWidth =
+      this.declaredWidth <= 0
+        ? 0
+        : resolveMTextWrapWidth({
+            text: this.mtextString,
+            height,
+            width: this.declaredWidth
+          });
     const data: MTextData = {
       text: this.mtextString,
-      height: Math.max(1, this.defaultTextStyle.fixedTextHeight),
-      width: this.width,
+      height,
+      width:
+        typeof renderWidth === 'number' && Number.isFinite(renderWidth)
+          ? renderWidth
+          : this.declaredWidth,
       position: {
         x: this.position.x,
         y: this.position.y,
         z: this.position.z
       },
       attachmentPoint: this.editorAttachmentPoint,
-      drawingDirection: MTextFlowDirection.LEFT_TO_RIGHT,
-      widthFactor: 1,
+      drawingDirection: this.editorDrawingDirection,
+      // Match AcDbMText.subWorldDraw: do not force widthFactor on MTextData.
+      // Renderer uses `mtextData.widthFactor || style.widthFactor`; a hardcoded
+      // `1` here would ignore TEXTSTYLE widthFactor and inflate CJK advances
+      // (false wrap + attachment drift vs the drawing).
       collectCharBoxes: true
     };
+    if (this.editorDirectionVector) {
+      data.directionVector = { ...this.editorDirectionVector };
+    } else if (this.editorRotation !== 0) {
+      data.rotation = this.editorRotation;
+    }
     if (this.editorLineSpaceFactor != null && Number.isFinite(this.editorLineSpaceFactor)) {
       data.lineSpaceFactor = this.editorLineSpaceFactor;
     }
@@ -2112,7 +2284,10 @@ export class MTextInputBox {
   }
 
   private getFallbackLineAdvance(): number {
-    return Math.max(1, this.currentFormat.fontSize * MTextInputBox.FALLBACK_LINE_ADVANCE_RATIO);
+    return Math.max(
+      Number.EPSILON,
+      this.currentFormat.fontSize * MTextInputBox.FALLBACK_LINE_ADVANCE_RATIO
+    );
   }
 
   private createTextStyle(): TextStyle {
